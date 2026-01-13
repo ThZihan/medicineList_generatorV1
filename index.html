@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine List Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1 class="title">Medicine List Generator</h1>
+                <p class="subtitle">Easy-to-read medication schedule</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-logout" id="logoutBtn" title="Logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    </header>
+ 
+        <main class="main-content">
+            <div class="form-container">
+                <section class="patient-section">
+                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                        <div class="form-group">
+                            <label for="patientName">Patient Name</label>
+                            <input type="text" id="patientName" name="patientName" required
+                                   placeholder="Enter patient name" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="patientAge">Age</label>
+                            <input type="number" id="patientAge" name="patientAge" required
+                                   placeholder="Age" min="1" max="150">
+                        </div>
+                    </div>
+                </section>
+ 
+                <section class="form-section">
+                    <div class="section-header">
+                        <h2>Add Medicine</h2>
+                        <span class="medicine-count" id="medicineCount">0</span>
+                    </div>
+ 
+                    <form id="medicineForm" class="medicine-form">
+                        <div class="form-group autocomplete-container">
+                            <label for="medicineName">Medicine Name</label>
+                            <input type="text" id="medicineName" name="medicineName" required
+                                   placeholder="Search or type medicine" autocomplete="off">
+                            <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+                        </div>
+ 
+                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <div class="form-group">
+                                <label for="genericName">Generic Name</label>
+                                <input type="text" id="genericName" name="genericName" placeholder="Optional">
+                            </div>
+                            <div class="form-group">
+                                <label for="dose">Dosage</label>
+                                <input type="text" id="dose" name="dose" required placeholder="e.g. 50mg">
+                            </div>
+                        </div>
+ 
+                        <div class="form-group">
+                            <label>When to Take</label>
+                            <div class="timing-group">
+                                <label class="timing-card">
+                                    <input type="checkbox" name="timing" value="morning">
+                                    <div class="timing-content">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="M12 20v2"/><path d="M2 12h2"/></svg>
+                                        <span>Morning</span>
+                                    </div>
+                                </label>
+                                <label class="timing-card">
+                                    <input type="checkbox" name="timing" value="noon">
+                                    <div class="timing-content">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><path d="M16 12h2"/></svg>
+                                        <span>Noon</span>
+                                    </div>
+                                </label>
+                                <label class="timing-card">
+                                    <input type="checkbox" name="timing" value="night">
+                                    <div class="timing-content">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0 1-2 1 21 12.79z"/></svg>
+                                        <span>Night</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+ 
+                        <div class="form-group">
+                            <label for="frequency">Frequency</label>
+                            <select id="frequency" name="frequency" required>
+                                <option value="Daily">Daily</option>
+                                <option value="per NEED">As Needed</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Only Friday">Friday Only</option>
+                                <option value="Except WED & THUR">No Wed & Thu</option>
+                            </select>
+                        </div>
+ 
+                        <div class="form-group">
+                            <label>With Food</label>
+                            <div class="food-group">
+                                <label class="food-toggle">
+                                    <input type="radio" name="foodTiming" value="BEFORE FOOD" required>
+                                    <div class="toggle-content">Before Food</div>
+                                </label>
+                                <label class="food-toggle">
+                                    <input type="radio" name="foodTiming" value="AFTER FOOD">
+                                    <div class="toggle-content">After Food</div>
+                                </label>
+                            </div>
+                        </div>
+ 
+                        <div class="form-group">
+                            <label for="usedFor">Used For</label>
+                            <input type="text" id="usedFor" name="usedFor" placeholder="e.g. Blood pressure">
+                        </div>
+ 
+                        <div class="form-group">
+                            <label>Instructions</label>
+                            <div class="remarks-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="remarks" value="Complete full course">
+                                    <span>Complete full course</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="remarks" value="Not to lie down for 1 hour">
+                                    <span>Stay upright 1 hour</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="remarks" value="Take with plenty of water">
+                                    <span>Take with water</span>
+                                </label>
+                            </div>
+                            <input type="text" id="customRemarks" name="customRemarks" 
+                                   placeholder="Other instructions..." style="margin-top: 0.5rem;">
+                        </div>
+ 
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Add Medicine</button>
+                            <button type="button" class="btn btn-secondary" id="clearForm">Clear</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+ 
+            <section class="list-section">
+                <div class="section-header">
+                    <h2>Medicine Schedule</h2>
+                    <div class="list-actions">
+                        <button class="btn btn-secondary" id="clearAll" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Clear All</button>
+                    </div>
+                </div>
+ 
+                <div class="medicine-list" id="medicineList">
+                    <div class="empty-state">
+                        <div class="empty-icon">💊</div>
+                        <p>No medicines yet</p>
+                        <p style="font-size: 0.875rem; color: var(--text-light); margin-top: 0.5rem;">Add medicines using the form</p>
+                    </div>
+                </div>
+ 
+                <div class="generate-actions">
+                    <button class="btn" id="generatePDF">Generate PDF</button>
+                </div>
+            </section>
+        </main>
+ 
+        <footer style="text-align: center; margin-top: 2rem; padding: 1.5rem; border-top: 1px solid var(--border-color); color: var(--text-light); font-size: 0.875rem;">
+            <p>&copy; 2024 Medicine List Generator</p>
+        </footer>
+    </div>
+  
+    <script src="/static/config.js"></script>
+    <script src="/static/medicines.js"></script>
+    <script src="/static/script.js"></script>
+    <script src="/static/ocr.js"></script>
+    <script src="/static/auth.js"></script>
+    <script>
+        // Initialize logout button - execute immediately (DOMContentLoaded already fired)
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to logout?')) {
+                    logout();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
