@@ -855,7 +855,18 @@ async function generatePDF() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         const patientName = inputs.patientName.value.trim() || 'Patient Name';
-        doc.text(patientName, margin, 15);
+        const patientAge = inputs.patientAge.value.trim() || '';
+        
+        if (patientAge) {
+            // Combine name and age on same line with smaller font for age
+            const nameWidth = doc.getTextWidth(patientName);
+            doc.text(patientName, margin, 15);
+            doc.setFontSize(12);
+            doc.text(` (${patientAge} yrs)`, margin + nameWidth + 2, 15);
+            doc.setFontSize(18); // Reset font size
+        } else {
+            doc.text(patientName, margin, 15);
+        }
         
         const date = new Date();
         const dateStr = date.toLocaleDateString('en-US', {
@@ -945,7 +956,7 @@ async function generatePDF() {
             body: tableData,
             theme: 'grid',
             styles: {
-                fontSize: 9,
+                fontSize: 10,
                 cellPadding: 3,
                 textColor: [0, 0, 0],
                 lineColor: [200, 200, 200],
@@ -959,15 +970,20 @@ async function generatePDF() {
                 fillColor: headerColor,
                 textColor: [0, 0, 0],
                 fontStyle: 'bold',
-                fontSize: 9,
+                fontSize: 11,
                 halign: 'center'
+            },
+            columnStyles: {
+                4: { cellWidth: 45 }, // Instructions column (index 4)
+                3: { cellWidth: 15 }
             },
             margin: { top: 30, right: 0, bottom: margin, left: 0 },
             didParseCell: function(data) {
                 if (data.section === 'body') {
                     const med = medicines[data.row.index];
                     data.cell.styles.fillColor = getRowColor(med);
-                    data.cell.styles.textColor = getTextColorForPDF(data.cell.styles.fillColor);
+                    // Always use black text for all table data
+                    data.cell.styles.textColor = [0, 0, 0];
                 }
             },
             didDrawPage: function(data) {

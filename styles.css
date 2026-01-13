@@ -173,6 +173,73 @@ body {
     }
 }
 
+/* Quick Actions Section */
+.quick-actions-section {
+    background: var(--bg-surface);
+    border: 2px solid var(--border-secondary);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-lg);
+}
+
+.quick-actions-title {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.quick-actions-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+/* Gradient Button Style */
+.btn-gradient {
+    background: linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    transform: translateY(0px);
+    box-shadow: rgba(102, 126, 234, 0.3) 0px 4px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    font-family: var(--font-body);
+}
+
+.btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: rgba(102, 126, 234, 0.4) 0px 6px 16px;
+    background: linear-gradient(135deg, rgb(92, 116, 224) 0%, rgb(108, 65, 152) 100%);
+}
+
+.btn-gradient:active {
+    transform: translateY(0px);
+    box-shadow: rgba(102, 126, 234, 0.3) 0px 2px 8px;
+}
+
+.btn-gradient svg {
+    transition: var(--transition-fast);
+}
+
+.btn-gradient:hover svg {
+    transform: scale(1.1);
+}
+
 /* Sections */
 .form-section, .list-section, .patient-section {
     background: var(--bg-surface);
@@ -184,6 +251,19 @@ body {
     background: var(--bg-elevated);
     border: 2px solid var(--accent-primary);
     padding: var(--spacing-md) var(--spacing-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.patient-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+    opacity: 0.8;
 }
 
 /* Section Header */
@@ -205,6 +285,7 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+
 
 .medicine-count {
     background: var(--accent-primary);
@@ -626,18 +707,8 @@ input[readonly] {
     margin-top: var(--spacing-lg);
 }
 
-.generate-actions .btn {
+.generate-actions .btn-gradient {
     width: 100%;
-    background: var(--accent-primary);
-    color: var(--bg-surface);
-    border-color: var(--accent-primary);
-    font-size: var(--text-base);
-    padding: var(--spacing-md) var(--spacing-lg);
-}
-
-.generate-actions .btn:hover {
-    background: var(--accent-secondary);
-    border-color: var(--accent-secondary);
 }
 
 /* Footer */
@@ -683,6 +754,21 @@ footer {
     .header-actions {
         width: 100%;
         justify-content: flex-end;
+    }
+    
+    .quick-actions-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+    
+    .quick-actions-buttons {
+        width: 100%;
+    }
+    
+    .quick-actions-buttons .btn-gradient {
+        width: 100%;
+        justify-content: center;
     }
     
     .form-section, .list-section, .patient-section {
@@ -925,25 +1011,6 @@ footer {
     margin: 0;
 }
 
-/* OCR Button Styling */
-.btn-ocr {
-    background: var(--accent-tertiary);
-    color: var(--bg-surface);
-    border-color: var(--accent-tertiary);
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.btn-ocr:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-}
-
-.btn-ocr svg {
-    width: 18px;
-    height: 18px;
-}
 
 /* ===================================
    Extracted Medicines Modal Styles
