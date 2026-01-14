@@ -80,17 +80,20 @@ WSGI_APPLICATION = 'medlist_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# Check if PostgreSQL configuration is available (production)
+# Check if MySQL configuration is available (production - PythonAnywhere free tier)
 if config('DB_NAME', default=None) and config('DB_USER', default=None):
-    # PostgreSQL configuration for PythonAnywhere
+    # MySQL configuration for PythonAnywhere free tier
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
+            'ENGINE': 'django.db.backends.mysql',
             'NAME': config('DB_NAME'),
             'USER': config('DB_USER'),
             'PASSWORD': config('DB_PASSWORD'),
             'HOST': config('DB_HOST'),
-            'PORT': config('DB_PORT', default='5432'),
+            'PORT': config('DB_PORT', default='3306'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
         }
     }
 else:
