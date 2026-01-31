@@ -517,3 +517,121 @@ def delete_user_medicine(request, medicine_id):
             'success': False,
             'message': f'Error deleting medicine: {str(e)}'
         }, status=500)
+
+
+@login_required
+def update_user_medicine(request, medicine_id):
+    """
+    Update a medicine owned by the logged-in user.
+    PUT /api/medicines/<id>/update/
+    
+    Expected JSON payload:
+    {
+        "medicine_name": "Updated Medicine Name",
+        "generic_name": "Updated Generic Name",
+        "dose": "100mg",
+        "instructions": "Updated instructions",
+        "cycle": "Weekly",
+        "schedule": "1-1-1",
+        "with_food": "AFTER FOOD",
+        "indication": "Updated indication"
+    }
+    
+    SECURITY: Only updates medicines belonging to request.user.patient
+    Returns 403 if attempting to update another user's medicine
+    """
+    if request.method != 'PUT':
+        return JsonResponse({
+            'success': False,
+            'message': 'Only PUT method allowed'
+        }, status=405)
+    
+    try:
+        # Parse JSON request body
+        data = json.loads(request.body)
+        
+        # SECURITY: Get the patient record for the logged-in user only
+        patient = Patient.objects.get(user=request.user)
+        
+        # SECURITY: Explicit ownership check before update
+        try:
+            medicine = UserMedicine.objects.get(id=medicine_id, patient=patient)
+        except UserMedicine.DoesNotExist:
+            # Medicine doesn't exist for this patient
+            # Check if it exists at all (belongs to another user)
+            if UserMedicine.objects.filter(id=medicine_id).exists():
+                # Medicine exists but belongs to another user
+                # Return 403 Forbidden - unauthorized access attempt
+                return JsonResponse({
+                    'success': False,
+                    'message': 'You do not have permission to update this medicine'
+                }, status=403)
+            else:
+                # Medicine doesn't exist at all
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Medicine not found'
+                }, status=404)
+        
+        # Validate required fields
+        required_fields = ['medicine_name', 'dose', 'cycle', 'schedule', 'with_food']
+        for field in required_fields:
+            if field in data and not data[field]:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Field {field} cannot be empty'
+                }, status=400)
+        
+        # Update medicine fields (only if provided in request)
+        if 'medicine_name' in data:
+            medicine.medicine_name = data['medicine_name']
+        if 'generic_name' in data:
+            medicine.generic_name = data.get('generic_name', '')
+        if 'dose' in data:
+            medicine.dose = data['dose']
+        if 'instructions' in data:
+            medicine.instructions = data.get('instructions', '')
+        if 'cycle' in data:
+            medicine.cycle = data['cycle']
+        if 'schedule' in data:
+            medicine.schedule = data['schedule']
+        if 'with_food' in data:
+            medicine.with_food = data['with_food']
+        if 'indication' in data:
+            medicine.indication = data.get('indication', '')
+        
+        # Save the updated medicine
+        medicine.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Medicine updated successfully',
+            'medicine': {
+                'id': medicine.id,
+                'medicine_name': medicine.medicine_name,
+                'generic_name': medicine.generic_name,
+                'dose': medicine.dose,
+                'instructions': medicine.instructions,
+                'cycle': medicine.cycle,
+                'schedule': medicine.schedule,
+                'with_food': medicine.with_food,
+                'indication': medicine.indication
+            }
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Patient.DoesNotExist:
+        # Patient record doesn't exist for this user
+        return JsonResponse({
+            'success': False,
+            'message': 'Patient record not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error updating medicine: {str(e)}'
+        }, status=500)

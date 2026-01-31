@@ -157,6 +157,12 @@ clearFormBtn.addEventListener('click', clearForm);
 clearAllBtn.addEventListener('click', handleClearAll);
 generatePDFBtn.addEventListener('click', generatePDF);
 
+// Edit form event listener
+const editMedicineForm = document.getElementById('editMedicineForm');
+if (editMedicineForm) {
+    editMedicineForm.addEventListener('submit', handleEditFormSubmit);
+}
+
 // Form Submission Handler
 async function handleFormSubmit(e) {
     e.preventDefault();
@@ -290,6 +296,140 @@ async function deleteMedicine(id) {
         showNotification('Medicine removed', 'info');
     } else {
         showNotification(result.message || 'Failed to delete medicine', 'error');
+    }
+}
+
+// Edit Medicine
+async function editMedicine(id) {
+    // Find the medicine in the local array
+    const medicine = medicines.find(med => med.id === id);
+    
+    if (!medicine) {
+        showNotification('Medicine not found', 'error');
+        return;
+    }
+    
+    // Populate the edit form with medicine data
+    document.getElementById('editMedicineId').value = medicine.id;
+    document.getElementById('editMedicineName').value = medicine.medicineName;
+    document.getElementById('editGenericName').value = medicine.genericName || '';
+    document.getElementById('editDose').value = medicine.dose;
+    document.getElementById('editFrequency').value = medicine.frequency;
+    document.getElementById('editUsedFor').value = medicine.usedFor || '';
+    
+    // Set timing checkboxes
+    const timingCheckboxes = document.querySelectorAll('input[name="editTiming"]');
+    timingCheckboxes.forEach(checkbox => {
+        checkbox.checked = medicine.timing.includes(checkbox.value);
+    });
+    
+    // Set food timing radio
+    const foodTimingRadios = document.querySelectorAll('input[name="editFoodTiming"]');
+    foodTimingRadios.forEach(radio => {
+        radio.checked = radio.value === medicine.foodTiming;
+    });
+    
+    // Set remarks checkboxes
+    const remarksCheckboxes = document.querySelectorAll('input[name="editRemarks"]');
+    remarksCheckboxes.forEach(checkbox => {
+        checkbox.checked = medicine.remarks.includes(checkbox.value);
+    });
+    
+    // Set custom remarks (filter out predefined remarks)
+    const predefinedRemarks = ['Complete full course', 'Not to lie down for 1 hour', 'Take with plenty of water'];
+    const customRemarks = medicine.remarks.filter(r => !predefinedRemarks.includes(r));
+    document.getElementById('editCustomRemarks').value = customRemarks.join(', ');
+    
+    // Show the modal
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+// Close Edit Modal
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    document.getElementById('editMedicineForm').reset();
+}
+
+// Handle Edit Form Submission
+async function handleEditFormSubmit(e) {
+    e.preventDefault();
+    
+    const medicineId = parseInt(document.getElementById('editMedicineId').value);
+    
+    const timingCheckboxes = document.querySelectorAll('input[name="editTiming"]:checked');
+    const timing = Array.from(timingCheckboxes).map(cb => cb.value);
+    
+    const foodTimingRadio = document.querySelector('input[name="editFoodTiming"]:checked');
+    const foodTiming = foodTimingRadio ? foodTimingRadio.value : '';
+    
+    const remarksCheckboxes = document.querySelectorAll('input[name="editRemarks"]:checked');
+    const remarks = Array.from(remarksCheckboxes).map(cb => cb.value);
+    
+    if (document.getElementById('editCustomRemarks').value.trim()) {
+        remarks.push(document.getElementById('editCustomRemarks').value.trim());
+    }
+    
+    if (timing.length === 0) {
+        showNotification('Please select at least one time (Morning/Noon/Night)', 'error');
+        return;
+    }
+    
+    // Convert timing array to schedule string (e.g., "1-0-0" for morning only)
+    let morning = '0';
+    let noon = '0';
+    let night = '0';
+    
+    if (timing.includes('morning')) morning = '1';
+    if (timing.includes('noon')) noon = '1';
+    if (timing.includes('night')) night = '1';
+    
+    const schedule = `${morning}-${noon}-${night}`;
+    
+    // Prepare medicine data for backend
+    const medicineData = {
+        medicine_name: document.getElementById('editMedicineName').value.trim(),
+        generic_name: document.getElementById('editGenericName').value.trim(),
+        dose: document.getElementById('editDose').value.trim(),
+        instructions: remarks.join(', '),
+        cycle: document.getElementById('editFrequency').value,
+        schedule: schedule,
+        with_food: foodTiming,
+        indication: document.getElementById('editUsedFor').value.trim()
+    };
+    
+    // Update medicine in backend
+    const result = await updateMedicineInBackend(medicineId, medicineData);
+    
+    if (result.success) {
+        // Update the medicine in local state
+        const medicineIndex = medicines.findIndex(med => med.id === medicineId);
+        if (medicineIndex !== -1) {
+            medicines[medicineIndex] = {
+                id: medicineId,
+                medicineName: result.medicine.medicine_name,
+                genericName: result.medicine.generic_name,
+                dose: result.medicine.dose,
+                timing: timing,
+                frequency: document.getElementById('editFrequency').value,
+                foodTiming: foodTiming,
+                usedFor: document.getElementById('editUsedFor').value.trim(),
+                remarks: remarks,
+                createdAt: medicines[medicineIndex].createdAt
+            };
+        }
+        
+        updateMedicineList();
+        closeEditModal();
+        showNotification('Medicine updated successfully!', 'success');
+    } else {
+        if (result.message && result.message.includes('Not authenticated')) {
+            showNotification('Session expired. Please login again.', 'error');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        } else {
+            showNotification(result.message || 'Failed to update medicine', 'error');
+        }
     }
 }
 
@@ -656,7 +796,10 @@ function updateMedicineList() {
                     <div class="medicine-name" style="color: #000000;">${escapeHtml(med.medicineName)}</div>
                     ${med.genericName ? `<div class="medicine-generic" style="color: #000000;">${escapeHtml(med.genericName)}</div>` : ''}
                 </div>
-                <button onclick="deleteMedicine(${med.id})" style="background: transparent; border: none; color: #000000; cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: all 0.2s ease; font-size: 1.125rem;" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.color='#000000'" onmouseout="this.style.background='transparent'; this.style.color='#000000'">×</button>
+                <div style="display: flex; gap: 0.25rem;">
+                    <button onclick="editMedicine(${med.id})" style="background: transparent; border: none; color: #000000; cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: all 0.2s ease; font-size: 1rem;" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.color='#000000'" onmouseout="this.style.background='transparent'; this.style.color='#000000'" title="Edit medicine">✎</button>
+                    <button onclick="deleteMedicine(${med.id})" style="background: transparent; border: none; color: #000000; cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: all 0.2s ease; font-size: 1.125rem;" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.color='#000000'" onmouseout="this.style.background='transparent'; this.style.color='#000000'" title="Delete medicine">×</button>
+                </div>
             </div>
             
             <div class="medicine-details">
@@ -1386,6 +1529,41 @@ async function deleteFromBackend(medicineId) {
         return data;
     } catch (error) {
         console.error('Error deleting medicine:', error);
+        return { success: false, message: 'Network error' };
+    }
+}
+
+// Update medicine in backend
+async function updateMedicineInBackend(medicineId, medicineData) {
+    try {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Add CSRF token if available
+        const csrfToken = getCSRFToken();
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/medicines/${medicineId}/update/`, {
+            method: 'PUT',
+            headers: headers,
+            credentials: 'include',
+            body: JSON.stringify(medicineData)
+        });
+        
+        // Handle authentication errors
+        if (response.status === 401 || response.status === 403) {
+            console.error('User not authenticated or CSRF error');
+            const data = await response.json();
+            return { success: false, message: data.message || 'Not authenticated' };
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error updating medicine:', error);
         return { success: false, message: 'Network error' };
     }
 }

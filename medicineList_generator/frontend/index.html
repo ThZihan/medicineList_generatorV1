@@ -204,7 +204,118 @@
                 </div>
             </section>
         </main>
- 
+  
+        <!-- Edit Medicine Modal -->
+        <div id="editModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Medicine</h3>
+                    <button class="modal-close" onclick="closeEditModal()">×</button>
+                </div>
+                <form id="editMedicineForm" class="medicine-form">
+                    <input type="hidden" id="editMedicineId" name="editMedicineId">
+                    
+                    <div class="form-group">
+                        <label for="editMedicineName">Medicine Name</label>
+                        <input type="text" id="editMedicineName" name="editMedicineName" required
+                               placeholder="Enter medicine name" autocomplete="off">
+                    </div>
+  
+                    <div class="form-group">
+                        <label for="editGenericName">Generic Name</label>
+                        <input type="text" id="editGenericName" name="editGenericName" placeholder="Optional">
+                    </div>
+  
+                    <div class="form-group">
+                        <label for="editDose">Dosage</label>
+                        <input type="text" id="editDose" name="editDose" required placeholder="e.g. 50mg">
+                    </div>
+  
+                    <div class="form-group">
+                        <label>When to Take</label>
+                        <div class="timing-group">
+                            <label class="timing-card">
+                                <input type="checkbox" name="editTiming" value="morning">
+                                <div class="timing-content">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="M12 20v2"/><path d="M2 12h2"/></svg>
+                                    <span>Morning</span>
+                                </div>
+                            </label>
+                            <label class="timing-card">
+                                <input type="checkbox" name="editTiming" value="noon">
+                                <div class="timing-content">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/><path d="M16 12h2"/></svg>
+                                    <span>Noon</span>
+                                </div>
+                            </label>
+                            <label class="timing-card">
+                                <input type="checkbox" name="editTiming" value="night">
+                                <div class="timing-content">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0 1-2 1 21 12.79z"/></svg>
+                                    <span>Night</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+  
+                    <div class="form-group">
+                        <label for="editFrequency">Frequency</label>
+                        <select id="editFrequency" name="editFrequency" required>
+                            <option value="Daily">Daily</option>
+                            <option value="per NEED">As Needed</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Only Friday">Friday Only</option>
+                            <option value="Except WED & THUR">No Wed & Thu</option>
+                        </select>
+                    </div>
+  
+                    <div class="form-group">
+                        <label>With Food</label>
+                        <div class="food-group">
+                            <label class="food-toggle">
+                                <input type="radio" name="editFoodTiming" value="BEFORE FOOD" required>
+                                <div class="toggle-content">Before Food</div>
+                            </label>
+                            <label class="food-toggle">
+                                <input type="radio" name="editFoodTiming" value="AFTER FOOD">
+                                <div class="toggle-content">After Food</div>
+                            </label>
+                        </div>
+                    </div>
+  
+                    <div class="form-group">
+                        <label for="editUsedFor">Used For</label>
+                        <input type="text" id="editUsedFor" name="editUsedFor" placeholder="e.g. Blood pressure">
+                    </div>
+  
+                    <div class="form-group">
+                        <label>Instructions</label>
+                        <div class="remarks-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="editRemarks" value="Complete full course">
+                                <span>Complete full course</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="editRemarks" value="Not to lie down for 1 hour">
+                                <span>Stay upright 1 hour</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="editRemarks" value="Take with plenty of water">
+                                <span>Take with water</span>
+                            </label>
+                        </div>
+                        <input type="text" id="editCustomRemarks" name="editCustomRemarks"
+                               placeholder="Other instructions..." style="margin-top: 0.5rem;">
+                    </div>
+  
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+  
         <footer style="text-align: center; margin-top: 2rem; padding: 1.5rem; border-top: 1px solid var(--border-color); color: var(--text-light); font-size: 0.875rem;">
             <p>&copy; 2024 Medicine List Generator</p>
         </footer>

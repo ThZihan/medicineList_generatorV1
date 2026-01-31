@@ -1267,3 +1267,281 @@ footer {
         flex-direction: column;
     }
 }
+
+/* ===================================
+   EDIT MEDICINE MODAL STYLES
+   =================================== */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: var(--bg-surface);
+    border: 2px solid var(--border-primary);
+    border-radius: var(--border-radius-md);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease-out;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg);
+    border-bottom: 2px solid var(--border-primary);
+    background: var(--bg-elevated);
+}
+
+.modal-header h3 {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.75rem;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-sm);
+    transition: all var(--transition-fast);
+    color: var(--text-tertiary);
+}
+
+.modal-close:hover {
+    background: var(--error);
+    color: white;
+}
+
+.modal-content .medicine-form {
+    padding: var(--spacing-lg);
+}
+
+.modal-content .form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.modal-content .form-group label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="number"],
+.modal-content select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--text-base);
+    font-family: var(--font-body);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.modal-content input[type="text"]:focus,
+.modal-content input[type="number"]:focus,
+.modal-content select:focus {
+    outline: none;
+    border-color: var(--accent-tertiary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.modal-content .timing-group {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.modal-content .timing-card {
+    flex: 1;
+    cursor: pointer;
+    border: 2px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    padding: 0.75rem;
+    text-align: center;
+    transition: all var(--transition-fast);
+}
+
+.modal-content .timing-card:hover {
+    border-color: var(--accent-tertiary);
+}
+
+.modal-content .timing-card input[type="checkbox"] {
+    display: none;
+}
+
+.modal-content .timing-card input[type="checkbox"]:checked + .timing-content {
+    background: var(--accent-tertiary);
+    color: white;
+}
+
+.modal-content .timing-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.modal-content .timing-content svg {
+    width: 20px;
+    height: 20px;
+}
+
+.modal-content .timing-content span {
+    font-size: var(--text-xs);
+    font-weight: 600;
+}
+
+.modal-content .food-group {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.modal-content .food-toggle {
+    flex: 1;
+    cursor: pointer;
+}
+
+.modal-content .food-toggle input[type="radio"] {
+    display: none;
+}
+
+.modal-content .food-toggle .toggle-content {
+    padding: 0.75rem;
+    border: 2px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    text-align: center;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.modal-content .food-toggle input[type="radio"]:checked + .toggle-content {
+    background: var(--accent-tertiary);
+    color: white;
+    border-color: var(--accent-tertiary);
+}
+
+.modal-content .remarks-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.modal-content .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: var(--text-sm);
+}
+
+.modal-content .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.modal-content .form-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+}
+
+.modal-content .form-actions .btn {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    font-size: var(--text-base);
+    font-weight: 600;
+    border: 2px solid var(--border-primary);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.modal-content .form-actions .btn-primary {
+    background: var(--accent-tertiary);
+    color: white;
+    border-color: var(--accent-tertiary);
+}
+
+.modal-content .form-actions .btn-primary:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.modal-content .form-actions .btn-secondary {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.modal-content .form-actions .btn-secondary:hover {
+    background: var(--bg-elevated);
+}
+
+/* Responsive styles for modal */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .modal-content .timing-group {
+        flex-direction: column;
+    }
+    
+    .modal-content .food-group {
+        flex-direction: column;
+    }
+    
+    .modal-content .form-actions {
+        flex-direction: column;
+    }
+}
