@@ -653,9 +653,9 @@ def get_color_preferences(request):
             user=user,
             defaults={
                 'palette_type': 'default',
-                'morning_color': '#22c55e',
-                'noon_color': '#f59e0b',
-                'night_color': '#3b82f6'
+                'morning_color': '#72CB92',
+                'noon_color': '#D79E63',
+                'night_color': '#7DA7D7'
             }
         )
         
@@ -729,9 +729,9 @@ def save_color_preferences(request):
                 preferences.night_color = '#ff1744'     # Bright red
             elif palette_type == 'default':
                 preferences.palette_type = 'default'
-                preferences.morning_color = '#22c55e'
-                preferences.noon_color = '#f59e0b'
-                preferences.night_color = '#3b82f6'
+                preferences.morning_color = '#72CB92'
+                preferences.noon_color = '#D79E63'
+                preferences.night_color = '#7DA7D7'
             else:
                 preferences.palette_type = palette_type
         
@@ -799,9 +799,9 @@ def get_available_palettes(request):
                 'name': 'Default',
                 'description': 'Standard color scheme',
                 'base_colors': {
-                    'morning': '#22c55e',
-                    'noon': '#f59e0b',
-                    'night': '#3b82f6'
+                    'morning': '#72CB92',
+                    'noon': '#D79E63',
+                    'night': '#7DA7D7'
                 },
                 'combined_colors': {
                     'morning_noon': '#84cc16',

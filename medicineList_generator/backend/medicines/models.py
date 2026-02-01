@@ -19,9 +19,9 @@ class UserColorPreferences(models.Model):
     palette_type = models.CharField(max_length=20, default='default')
     
     # Base colors
-    morning_color = models.CharField(max_length=7, default='#22c55e')  # Green
-    noon_color = models.CharField(max_length=7, default='#f59e0b')    # Yellow/Orange
-    night_color = models.CharField(max_length=7, default='#3b82f6')   # Blue
+    morning_color = models.CharField(max_length=7, default='#72CB92')  # Teal
+    noon_color = models.CharField(max_length=7, default='#D79E63')    # Orange
+    night_color = models.CharField(max_length=7, default='#7DA7D7')   # Purple
     
     # Combined colors (can be custom or auto-calculated)
     morning_noon_color = models.CharField(max_length=7, blank=True, null=True)

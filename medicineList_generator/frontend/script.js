@@ -487,25 +487,76 @@ function getTimingPriority(timing) {
 // SUB-GROUPING SYSTEM
 // ===================================
 
-// Base RGB colors for time-of-day
-const TIMING_COLORS = {
-    morning: { r: 134, g: 239, b: 172 },  // Green
-    noon: { r: 253, g: 186, b: 116 },      // Orange
-    night: { r: 147, g: 197, b: 253 }      // Blue
-};
+// Helper function to convert hex to RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
 
-// Lighter base shades (for baseline entries - all parameters match)
-const LIGHT_BASE_SHADES = {
-    morning: '#e1eed9',
-    noon: '#fae3d4',
-    night: '#deeaf6'
-};
+// Get timing colors from current color preferences
+function getTimingColors() {
+    // Try to get colors from color preferences module
+    if (typeof getCurrentColorPreferences === 'function') {
+        const prefs = getCurrentColorPreferences();
+        return {
+            morning: hexToRgb(prefs.base_colors.morning) || { r: 134, g: 239, b: 172 },
+            noon: hexToRgb(prefs.base_colors.noon) || { r: 253, g: 186, b: 116 },
+            night: hexToRgb(prefs.base_colors.night) || { r: 147, g: 197, b: 253 }
+        };
+    }
+    
+    // Fallback to default colors
+    return {
+        morning: { r: 134, g: 239, b: 172 },  // Green
+        noon: { r: 253, g: 186, b: 116 },      // Orange
+        night: { r: 147, g: 197, b: 253 }      // Blue
+    };
+}
+
+// Get light base shades from current color preferences
+function getLightBaseShades() {
+    // Try to get colors from color preferences module
+    if (typeof getCurrentColorPreferences === 'function') {
+        const prefs = getCurrentColorPreferences();
+        return {
+            morning: lightenColor(prefs.base_colors.morning, 0.85),
+            noon: lightenColor(prefs.base_colors.noon, 0.85),
+            night: lightenColor(prefs.base_colors.night, 0.85)
+        };
+    }
+    
+    // Fallback to default colors
+    return {
+        morning: '#e1eed9',
+        noon: '#fae3d4',
+        night: '#deeaf6'
+    };
+}
+
+// Helper function to lighten a hex color
+function lightenColor(hex, factor) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    
+    const r = Math.min(255, Math.round(rgb.r + (255 - rgb.r) * factor));
+    const g = Math.min(255, Math.round(rgb.g + (255 - rgb.g) * factor));
+    const b = Math.min(255, Math.round(rgb.b + (255 - rgb.b) * factor));
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
 
 // Blend RGB colors based on active timing slots
 function blendTimingColors(timing) {
     const hasMorning = timing.includes('morning');
     const hasNoon = timing.includes('noon');
     const hasNight = timing.includes('night');
+    
+    // Get current timing colors
+    const TIMING_COLORS = getTimingColors();
     
     // Count how many timing options are selected
     const timingCount = (hasMorning ? 1 : 0) + (hasNoon ? 1 : 0) + (hasNight ? 1 : 0);
@@ -647,6 +698,9 @@ function getSubgroupColor(med) {
     // Get the blended base color from timing
     const baseColor = blendTimingColors(med.timing);
     const variations = countParameterVariations(med);
+    
+    // Get light base shades from current color preferences
+    const LIGHT_BASE_SHADES = getLightBaseShades();
     
     // If 0 variations (baseline), use the lighter base shades
     if (variations === 0) {
@@ -876,9 +930,9 @@ async function generatePDF() {
         const textColor = [26, 26, 26];
         const lightColor = [107, 114, 128];
         
-        const timingMorning = [34, 197, 94];
-        const timingNoon = [251, 191, 36];
-        const timingMornNoon = [132, 204, 22];
+        // Get current timing colors for PDF
+        const TIMING_COLORS_PDF = getTimingColors();
+        const LIGHT_BASE_SHADES_PDF = getLightBaseShades();
         
         // Helper function to blend timing colors for PDF
         function blendTimingColorsForPDF(timing) {
@@ -889,27 +943,27 @@ async function generatePDF() {
             const timingCount = (hasMorning ? 1 : 0) + (hasNoon ? 1 : 0) + (hasNight ? 1 : 0);
             
             if (timingCount === 1) {
-                if (hasMorning) return TIMING_COLORS.morning;
-                if (hasNoon) return TIMING_COLORS.noon;
-                if (hasNight) return TIMING_COLORS.night;
+                if (hasMorning) return TIMING_COLORS_PDF.morning;
+                if (hasNoon) return TIMING_COLORS_PDF.noon;
+                if (hasNight) return TIMING_COLORS_PDF.night;
             }
             
             let totalR = 0, totalG = 0, totalB = 0;
             
             if (hasMorning) {
-                totalR += TIMING_COLORS.morning.r;
-                totalG += TIMING_COLORS.morning.g;
-                totalB += TIMING_COLORS.morning.b;
+                totalR += TIMING_COLORS_PDF.morning.r;
+                totalG += TIMING_COLORS_PDF.morning.g;
+                totalB += TIMING_COLORS_PDF.morning.b;
             }
             if (hasNoon) {
-                totalR += TIMING_COLORS.noon.r;
-                totalG += TIMING_COLORS.noon.g;
-                totalB += TIMING_COLORS.noon.b;
+                totalR += TIMING_COLORS_PDF.noon.r;
+                totalG += TIMING_COLORS_PDF.noon.g;
+                totalB += TIMING_COLORS_PDF.noon.b;
             }
             if (hasNight) {
-                totalR += TIMING_COLORS.night.r;
-                totalG += TIMING_COLORS.night.g;
-                totalB += TIMING_COLORS.night.b;
+                totalR += TIMING_COLORS_PDF.night.r;
+                totalG += TIMING_COLORS_PDF.night.g;
+                totalB += TIMING_COLORS_PDF.night.b;
             }
             
             return {
@@ -917,6 +971,12 @@ async function generatePDF() {
                 g: Math.round(totalG / timingCount),
                 b: Math.round(totalB / timingCount)
             };
+        }
+        
+        // Helper function to convert hex color string to RGB array for PDF
+        function hexToRgbArray(hex) {
+            const rgb = hexToRgb(hex);
+            return [rgb.r, rgb.g, rgb.b];
         }
         
         function getRowColor(med) {
@@ -936,22 +996,25 @@ async function generatePDF() {
                 const timingCount = (hasMorning ? 1 : 0) + (hasNoon ? 1 : 0) + (hasNight ? 1 : 0);
                 
                 if (timingCount === 1) {
-                    if (hasMorning) return [225, 238, 217]; // #e1eed9
-                    if (hasNoon) return [250, 227, 212]; // #fae3d4
-                    if (hasNight) return [222, 234, 246]; // #deeaf6
+                    if (hasMorning) return hexToRgbArray(LIGHT_BASE_SHADES_PDF.morning);
+                    if (hasNoon) return hexToRgbArray(LIGHT_BASE_SHADES_PDF.noon);
+                    if (hasNight) return hexToRgbArray(LIGHT_BASE_SHADES_PDF.night);
                 }
                 
                 // For mixed timing with 0 variations, blend the light base shades
                 let totalR = 0, totalG = 0, totalB = 0;
                 
                 if (hasMorning) {
-                    totalR += 225; totalG += 238; totalB += 217;
+                    const rgb = hexToRgb(LIGHT_BASE_SHADES_PDF.morning);
+                    totalR += rgb.r; totalG += rgb.g; totalB += rgb.b;
                 }
                 if (hasNoon) {
-                    totalR += 250; totalG += 227; totalB += 212;
+                    const rgb = hexToRgb(LIGHT_BASE_SHADES_PDF.noon);
+                    totalR += rgb.r; totalG += rgb.g; totalB += rgb.b;
                 }
                 if (hasNight) {
-                    totalR += 222; totalG += 234; totalB += 246;
+                    const rgb = hexToRgb(LIGHT_BASE_SHADES_PDF.night);
+                    totalR += rgb.r; totalG += rgb.g; totalB += rgb.b;
                 }
                 
                 return [

@@ -6,9 +6,9 @@
 let currentColorPreferences = {
     palette_type: 'default',
     base_colors: {
-        morning: '#22c55e',
-        noon: '#f59e0b',
-        night: '#3b82f6'
+        morning: '#72CB92',
+        noon: '#D79E63',
+        night: '#7DA7D7'
     },
     combined_colors: {
         morning_noon: '#84cc16',
@@ -63,13 +63,6 @@ const customToggles = {
 // Palette radio buttons
 const paletteRadios = document.querySelectorAll('input[name="palette"]');
 
-// Custom palette preview
-const customPalettePreview = {
-    morning: document.getElementById('customMorningPreview'),
-    noon: document.getElementById('customNoonPreview'),
-    night: document.getElementById('customNightPreview')
-};
-
 // Initialize color preferences
 async function initializeColorPreferences() {
     try {
@@ -108,6 +101,11 @@ function applyColorsToUI() {
     root.style.setProperty('--timing-morn-night', currentColorPreferences.combined_colors.morning_night);
     root.style.setProperty('--timing-noon-night', currentColorPreferences.combined_colors.noon_night);
     root.style.setProperty('--timing-all-day', currentColorPreferences.combined_colors.all_day);
+}
+
+// Get current color preferences (for use by other modules)
+function getCurrentColorPreferences() {
+    return currentColorPreferences;
 }
 
 // Open color modal
@@ -164,18 +162,8 @@ function populateColorForm() {
     customToggles.noon_night.checked = currentColorPreferences.custom_flags.noon_night;
     customToggles.all_day.checked = currentColorPreferences.custom_flags.all_day;
     
-    // Update custom palette preview
-    updateCustomPalettePreview();
-    
     // Enable/disable combined color inputs based on custom flags
     updateCombinedColorInputs();
-}
-
-// Update custom palette preview
-function updateCustomPalettePreview() {
-    customPalettePreview.morning.style.background = colorInputs.morning.value;
-    customPalettePreview.noon.style.background = colorInputs.noon.value;
-    customPalettePreview.night.style.background = colorInputs.night.value;
 }
 
 // Calculate combined colors from base colors
@@ -259,9 +247,6 @@ function updateCombinedColors() {
         colorInputs.all_day.value = combined.all_day;
         colorTextInputs.all_day.value = combined.all_day;
     }
-    
-    // Update custom palette preview
-    updateCustomPalettePreview();
 }
 
 // Enable/disable combined color inputs based on custom flags
@@ -342,6 +327,11 @@ async function saveColorPreferences() {
             
             // Show success message
             showNotification('Color preferences saved successfully!', 'success');
+            
+            // Update medicine list with new colors
+            if (typeof updateMedicineList === 'function') {
+                updateMedicineList();
+            }
         } else {
             const error = await response.json();
             showNotification(error.message || 'Failed to save color preferences', 'error');
@@ -485,13 +475,13 @@ paletteRadios.forEach(radio => {
 function applyPalette(paletteType) {
     const palettes = {
         default: {
-            morning: '#22c55e',
-            noon: '#f59e0b',
-            night: '#3b82f6',
-            morning_noon: '#84cc16',
-            morning_night: '#06b6d4',
-            noon_night: '#8b5cf6',
-            all_day: '#6366f1'
+            morning: '#72CB92',
+            noon: '#D79E63',
+            night: '#7DA7D7',
+            morning_noon: '#A5B57A',
+            morning_night: '#78B9B5',
+            noon_night: '#AAA39D',
+            all_day: '#97B099'
         },
         vibrant: {
             morning: '#00c853',
@@ -537,9 +527,6 @@ function applyPalette(paletteType) {
     
     // Update combined color inputs
     updateCombinedColorInputs();
-    
-    // Update custom palette preview
-    updateCustomPalettePreview();
 }
 
 // Form submit event
