@@ -390,7 +390,7 @@ def add_user_medicine(request):
         data = json.loads(request.body)
         
         # Validate required fields
-        required_fields = ['medicine_name', 'dose', 'cycle', 'schedule', 'with_food']
+        required_fields = ['medicine_name', 'cycle', 'schedule', 'with_food']
         for field in required_fields:
             if field not in data or not data[field]:
                 return JsonResponse({
@@ -411,7 +411,7 @@ def add_user_medicine(request):
             patient=patient,  # Set from authenticated user, not from request
             medicine_name=data['medicine_name'],
             generic_name=data.get('generic_name', ''),
-            dose=data['dose'],
+            dose=data.get('dose', ''),
             instructions=data.get('instructions', ''),
             cycle=data['cycle'],
             schedule=data['schedule'],
@@ -574,7 +574,7 @@ def update_user_medicine(request, medicine_id):
                 }, status=404)
         
         # Validate required fields
-        required_fields = ['medicine_name', 'dose', 'cycle', 'schedule', 'with_food']
+        required_fields = ['medicine_name', 'cycle', 'schedule', 'with_food']
         for field in required_fields:
             if field in data and not data[field]:
                 return JsonResponse({

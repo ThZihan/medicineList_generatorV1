@@ -58,7 +58,7 @@ class UserMedicine(models.Model):
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='medicines')
     medicine_name = models.CharField(max_length=255)
     generic_name = models.CharField(max_length=255, blank=True, null=True)
-    dose = models.CharField(max_length=50)
+    dose = models.CharField(max_length=50, blank=True, null=True)
     instructions = models.TextField(blank=True, null=True)
     cycle = models.CharField(max_length=50)
     schedule = models.CharField(max_length=50)

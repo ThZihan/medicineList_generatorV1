@@ -857,11 +857,13 @@ function updateMedicineList() {
             </div>
             
             <div class="medicine-details">
+                ${med.dose ? `
                 <div class="medicine-detail">
                     <strong style="color: #000000;">Dosage</strong>
                     <span style="color: #000000;">${escapeHtml(med.dose)}</span>
                     <span class="subgroup-indicator" style="background: #000000;"></span>
                 </div>
+                ` : ''}
                 <div class="medicine-detail">
                     <strong style="color: #000000;">Schedule</strong>
                     <span style="color: #000000;">${getTimingString(med.timing)}</span>
@@ -894,7 +896,46 @@ function updateMedicineList() {
             ` : ''}
         </div>
     `).join('');
+    
+    // Check for scroll overflow and update scroll indicator
+    updateScrollIndicator();
 }
+
+// Update scroll indicator visibility based on scroll state
+function updateScrollIndicator() {
+    const wrapper = medicineList.closest('.medicine-list-wrapper');
+    if (!wrapper) return;
+    
+    // Check if there's overflow content
+    const hasOverflow = medicineList.scrollHeight > medicineList.clientHeight;
+    
+    if (hasOverflow) {
+        wrapper.classList.add('has-overflow');
+    } else {
+        wrapper.classList.remove('has-overflow');
+        wrapper.classList.remove('at-bottom');
+        return;
+    }
+    
+    // Check if scrolled to bottom
+    const isAtBottom = medicineList.scrollTop + medicineList.clientHeight >= medicineList.scrollHeight - 10;
+    
+    if (isAtBottom) {
+        wrapper.classList.add('at-bottom');
+    } else {
+        wrapper.classList.remove('at-bottom');
+    }
+    
+    // Position scroll indicator at bottom of visible area
+    const scrollIndicator = wrapper.querySelector('.scroll-indicator');
+    if (scrollIndicator) {
+        const wrapperHeight = wrapper.clientHeight;
+        scrollIndicator.style.top = (wrapperHeight - scrollIndicator.offsetHeight) + 'px';
+    }
+}
+
+// Add scroll event listener to medicine list
+medicineList.addEventListener('scroll', updateScrollIndicator);
 
 // Update Medicine Count
 function updateMedicineCount() {

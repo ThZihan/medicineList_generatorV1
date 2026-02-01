@@ -99,7 +99,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="dose">Dosage</label>
-                                <input type="text" id="dose" name="dose" required placeholder="e.g. 50mg" aria-required="true">
+                                <input type="text" id="dose" name="dose" placeholder="e.g. 50mg">
                             </div>
                         </div>
      
@@ -196,11 +196,21 @@
                     </div>
                 </div>
      
-                <div class="medicine-list" id="medicineList" role="list" aria-live="polite">
-                    <div class="empty-state" role="status">
-                        <div class="empty-icon" aria-hidden="true">💊</div>
-                        <p>No medicines yet</p>
-                        <p>Add medicines using the form</p>
+                <div class="medicine-list-wrapper">
+                    <div class="medicine-list" id="medicineList" role="list" aria-live="polite">
+                        <div class="empty-state" role="status">
+                            <div class="empty-icon" aria-hidden="true">💊</div>
+                            <p>No medicines yet</p>
+                            <p>Add medicines using the form</p>
+                        </div>
+                    </div>
+                    <div class="scroll-indicator" id="scrollIndicator" aria-hidden="true">
+                        <div class="scroll-indicator-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+                            </svg>
+                        </div>
+                        <span class="scroll-indicator-text">Scroll Down to view more</span>
                     </div>
                 </div>
      
@@ -240,7 +250,7 @@
       
                     <div class="form-group">
                         <label for="editDose">Dosage</label>
-                        <input type="text" id="editDose" name="editDose" required placeholder="e.g. 50mg" aria-required="true">
+                        <input type="text" id="editDose" name="editDose" placeholder="e.g. 50mg">
                     </div>
       
                     <fieldset class="form-group">

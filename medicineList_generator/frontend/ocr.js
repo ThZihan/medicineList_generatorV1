@@ -9,7 +9,7 @@ const GEMINI_MODEL_NAME = 'gemini-2.5-flash';
 // 1. Moving API calls to backend (recommended)
 // 2. Using environment variables
 // 3. Using a proxy server
-const GEMINI_API_KEY = 'AIzaSyC3e0oJebdSKdlNRNYrYOwxGjhX433zmVA'; // Your working key
+const GEMINI_API_KEY = 'AIzaSyBIfSBE9WqgAEX3gX4Hp-0_tnKtqFo_R3A'; // Your working key
 
 // Note: Newer models like 2.5 often require the 'v1beta' endpoint
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent`;
@@ -690,6 +690,12 @@ async function submitAllExtractedMedicines() {
         // Get timing checkboxes
         const timingCheckboxes = card.querySelectorAll('.extracted-timing:checked');
         medicine.timing = Array.from(timingCheckboxes).map(cb => cb.value);
+        
+        // Validate: At least one timing must be selected
+        if (medicine.timing.length === 0) {
+            alert(`Medicine ${cardIndex + 1} (${medicineName}): Please select at least one time (Morning/Noon/Night) to take the medicine.`);
+            return;
+        }
         
         // Get remarks
         const remarksCheckboxes = card.querySelectorAll('.extracted-remarks:checked');
