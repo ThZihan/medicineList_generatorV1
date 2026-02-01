@@ -22,7 +22,8 @@ from medicines.views import (
     login_view, register_view, logout_view, serve_login_page,
     serve_index_page, serve_static_file, get_user_medicines,
     add_user_medicine, delete_user_medicine, update_user_medicine,
-    get_patient_profile, update_patient_profile
+    get_patient_profile, update_patient_profile,
+    get_color_preferences, save_color_preferences, get_available_palettes
 )
 
 urlpatterns = [
@@ -36,6 +37,9 @@ urlpatterns = [
     path('api/medicines/<int:medicine_id>/update/', update_user_medicine, name='update_medicine'),
     path('api/patient/profile/', get_patient_profile, name='get_patient_profile'),
     path('api/patient/profile/update/', update_patient_profile, name='update_patient_profile'),
+    path('api/colors/preferences/', get_color_preferences, name='get_color_preferences'),
+    path('api/colors/preferences/save/', save_color_preferences, name='save_color_preferences'),
+    path('api/colors/palettes/', get_available_palettes, name='get_available_palettes'),
     path('login/', serve_login_page, name='login_page'),
     path('', serve_login_page, name='home'),
     path('index/', serve_index_page, name='index_page'),

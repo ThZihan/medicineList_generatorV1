@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 import os
 import json
-from .models import Patient, UserMedicine
+from .models import Patient, UserMedicine, UserColorPreferences
 
 
 @csrf_exempt
@@ -635,3 +635,253 @@ def update_user_medicine(request, medicine_id):
             'success': False,
             'message': f'Error updating medicine: {str(e)}'
         }, status=500)
+
+
+# ===================================
+# COLOR PREFERENCES API
+# ===================================
+
+@csrf_exempt
+@login_required
+def get_color_preferences(request):
+    """Get user's color preferences"""
+    try:
+        user = request.user
+        
+        # Get or create user color preferences
+        preferences, created = UserColorPreferences.objects.get_or_create(
+            user=user,
+            defaults={
+                'palette_type': 'default',
+                'morning_color': '#22c55e',
+                'noon_color': '#f59e0b',
+                'night_color': '#3b82f6'
+            }
+        )
+        
+        # Calculate combined colors if not set
+        combined_colors = calculate_combined_colors(
+            preferences.morning_color,
+            preferences.noon_color,
+            preferences.night_color
+        )
+        
+        # Use custom colors if set, otherwise use calculated
+        response_data = {
+            'success': True,
+            'palette_type': preferences.palette_type,
+            'base_colors': {
+                'morning': preferences.morning_color,
+                'noon': preferences.noon_color,
+                'night': preferences.night_color
+            },
+            'combined_colors': {
+                'morning_noon': preferences.morning_noon_color if preferences.custom_morning_noon else combined_colors['morning_noon'],
+                'morning_night': preferences.morning_night_color if preferences.custom_morning_night else combined_colors['morning_night'],
+                'noon_night': preferences.noon_night_color if preferences.custom_noon_night else combined_colors['noon_night'],
+                'all_day': preferences.all_day_color if preferences.custom_all_day else combined_colors['all_day']
+            },
+            'custom_flags': {
+                'morning_noon': preferences.custom_morning_noon,
+                'morning_night': preferences.custom_morning_night,
+                'noon_night': preferences.custom_noon_night,
+                'all_day': preferences.custom_all_day
+            }
+        }
+        
+        return JsonResponse(response_data, status=200)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error getting color preferences: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@login_required
+def save_color_preferences(request):
+    """Save user's color preferences"""
+    try:
+        if request.method != 'POST':
+            return JsonResponse({
+                'success': False,
+                'message': 'Only POST method is allowed'
+            }, status=405)
+        
+        user = request.user
+        data = json.loads(request.body)
+        
+        # Get or create user color preferences
+        preferences, created = UserColorPreferences.objects.get_or_create(
+            user=user
+        )
+        
+        # Update base colors
+        if 'palette_type' in data:
+            palette_type = data['palette_type']
+            
+            # Apply preset colors if palette type is 'vibrant'
+            if palette_type == 'vibrant':
+                preferences.palette_type = 'vibrant'
+                preferences.morning_color = '#00c853'  # Bright green
+                preferences.noon_color = '#ffeb3b'      # Bright yellow
+                preferences.night_color = '#ff1744'     # Bright red
+            elif palette_type == 'default':
+                preferences.palette_type = 'default'
+                preferences.morning_color = '#22c55e'
+                preferences.noon_color = '#f59e0b'
+                preferences.night_color = '#3b82f6'
+            else:
+                preferences.palette_type = palette_type
+        
+        if 'base_colors' in data:
+            base_colors = data['base_colors']
+            if 'morning' in base_colors:
+                preferences.morning_color = base_colors['morning']
+            if 'noon' in base_colors:
+                preferences.noon_color = base_colors['noon']
+            if 'night' in base_colors:
+                preferences.night_color = base_colors['night']
+        
+        # Update combined colors if provided
+        if 'combined_colors' in data:
+            combined_colors = data['combined_colors']
+            if 'morning_noon' in combined_colors:
+                preferences.morning_noon_color = combined_colors['morning_noon']
+                preferences.custom_morning_noon = True
+            if 'morning_night' in combined_colors:
+                preferences.morning_night_color = combined_colors['morning_night']
+                preferences.custom_morning_night = True
+            if 'noon_night' in combined_colors:
+                preferences.noon_night_color = combined_colors['noon_night']
+                preferences.custom_noon_night = True
+            if 'all_day' in combined_colors:
+                preferences.all_day_color = combined_colors['all_day']
+                preferences.custom_all_day = True
+        
+        # Reset custom flags if requested
+        if 'reset_custom' in data and data['reset_custom']:
+            preferences.custom_morning_noon = False
+            preferences.custom_morning_night = False
+            preferences.custom_noon_night = False
+            preferences.custom_all_day = False
+            preferences.morning_noon_color = None
+            preferences.morning_night_color = None
+            preferences.noon_night_color = None
+            preferences.all_day_color = None
+        
+        preferences.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Color preferences saved successfully'
+        }, status=200)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error saving color preferences: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def get_available_palettes(request):
+    """Get available color palettes"""
+    try:
+        palettes = {
+            'default': {
+                'name': 'Default',
+                'description': 'Standard color scheme',
+                'base_colors': {
+                    'morning': '#22c55e',
+                    'noon': '#f59e0b',
+                    'night': '#3b82f6'
+                },
+                'combined_colors': {
+                    'morning_noon': '#84cc16',
+                    'morning_night': '#06b6d4',
+                    'noon_night': '#8b5cf6',
+                    'all_day': '#6366f1'
+                }
+            },
+            'vibrant': {
+                'name': 'Vibrant',
+                'description': 'Bright and energetic colors',
+                'base_colors': {
+                    'morning': '#00c853',
+                    'noon': '#ffeb3b',
+                    'night': '#ff1744'
+                },
+                'combined_colors': {
+                    'morning_noon': '#64dd17',
+                    'morning_night': '#00e676',
+                    'noon_night': '#ff9100',
+                    'all_day': '#ff6d00'
+                }
+            }
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'palettes': palettes
+        }, status=200)
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error getting palettes: {str(e)}'
+        }, status=500)
+
+
+def calculate_combined_colors(morning_color, noon_color, night_color):
+    """Calculate combined colors by mixing base colors"""
+    def hex_to_rgb(hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    
+    def rgb_to_hex(rgb):
+        return '#{:02x}{:02x}{:02x}'.format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+    
+    def mix_colors(color1, color2, ratio=0.5):
+        rgb1 = hex_to_rgb(color1)
+        rgb2 = hex_to_rgb(color2)
+        mixed = (
+            rgb1[0] * ratio + rgb2[0] * (1 - ratio),
+            rgb1[1] * ratio + rgb2[1] * (1 - ratio),
+            rgb1[2] * ratio + rgb2[2] * (1 - ratio)
+        )
+        return rgb_to_hex(mixed)
+    
+    morning_rgb = hex_to_rgb(morning_color)
+    noon_rgb = hex_to_rgb(noon_color)
+    night_rgb = hex_to_rgb(night_color)
+    
+    # Morning + Noon
+    morning_noon = mix_colors(morning_color, noon_color, 0.5)
+    
+    # Morning + Night
+    morning_night = mix_colors(morning_color, night_color, 0.5)
+    
+    # Noon + Night
+    noon_night = mix_colors(noon_color, night_color, 0.5)
+    
+    # All Day (equal mix of all three)
+    all_day_rgb = (
+        (morning_rgb[0] + noon_rgb[0] + night_rgb[0]) / 3,
+        (morning_rgb[1] + noon_rgb[1] + night_rgb[1]) / 3,
+        (morning_rgb[2] + noon_rgb[2] + night_rgb[2]) / 3
+    )
+    all_day = rgb_to_hex(all_day_rgb)
+    
+    return {
+        'morning_noon': morning_noon,
+        'morning_night': morning_night,
+        'noon_night': noon_night,
+        'all_day': all_day
+    }

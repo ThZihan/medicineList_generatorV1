@@ -11,6 +11,40 @@ class Patient(models.Model):
         return self.user.username
 
 
+class UserColorPreferences(models.Model):
+    """Store user-specific color preferences for medicine timing"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    
+    # Palette type: 'default' or 'vibrant'
+    palette_type = models.CharField(max_length=20, default='default')
+    
+    # Base colors
+    morning_color = models.CharField(max_length=7, default='#22c55e')  # Green
+    noon_color = models.CharField(max_length=7, default='#f59e0b')    # Yellow/Orange
+    night_color = models.CharField(max_length=7, default='#3b82f6')   # Blue
+    
+    # Combined colors (can be custom or auto-calculated)
+    morning_noon_color = models.CharField(max_length=7, blank=True, null=True)
+    morning_night_color = models.CharField(max_length=7, blank=True, null=True)
+    noon_night_color = models.CharField(max_length=7, blank=True, null=True)
+    all_day_color = models.CharField(max_length=7, blank=True, null=True)
+    
+    # Track which combined colors are custom (not auto-calculated)
+    custom_morning_noon = models.BooleanField(default=False)
+    custom_morning_night = models.BooleanField(default=False)
+    custom_noon_night = models.BooleanField(default=False)
+    custom_all_day = models.BooleanField(default=False)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.palette_type} palette"
+    
+    class Meta:
+        verbose_name = "User Color Preferences"
+        verbose_name_plural = "User Color Preferences"
+
+
 class GlobalMedicine(models.Model):
     medicine_name = models.CharField(max_length=255)
     generic_name = models.CharField(max_length=255)

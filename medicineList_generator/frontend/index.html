@@ -18,6 +18,16 @@
                     <p class="subtitle">Easy-to-read medication schedule</p>
                 </div>
                 <div class="header-actions">
+                    <button class="btn btn-color" id="colorPickerBtn" title="Color Settings" aria-label="Color Settings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+                            <circle cx="13.5" cy="6.5" r=".5"/>
+                            <circle cx="17.5" cy="10.5" r=".5"/>
+                            <circle cx="8.5" cy="7.5" r=".5"/>
+                            <circle cx="6.5" cy="12.5" r=".5"/>
+                            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+                        </svg>
+                        <span>Colors</span>
+                    </button>
                     <button class="btn btn-logout" id="logoutBtn" title="Logout" aria-label="Logout">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h4"/>
@@ -318,6 +328,142 @@
             </div>
         </div>
       
+        <!-- Color Picker Modal -->
+        <div class="modal-overlay" id="colorModalOverlay" aria-hidden="true"></div>
+        <div class="modal" id="colorModal" role="dialog" aria-modal="true" aria-labelledby="colorModalTitle">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="colorModalTitle">Color Settings</h2>
+                    <button class="modal-close" onclick="closeColorModal()" aria-label="Close">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="colorForm" class="color-form">
+                    <!-- Palette Selection -->
+                    <div class="color-section">
+                        <h3 class="color-section-title">Choose Palette</h3>
+                        <div class="palette-options">
+                            <label class="palette-option">
+                                <input type="radio" name="palette" value="default" checked>
+                                <div class="palette-preview">
+                                    <div class="palette-color" style="background: #22c55e;"></div>
+                                    <div class="palette-color" style="background: #f59e0b;"></div>
+                                    <div class="palette-color" style="background: #3b82f6;"></div>
+                                </div>
+                                <span class="palette-name">Default</span>
+                            </label>
+                            <label class="palette-option">
+                                <input type="radio" name="palette" value="vibrant">
+                                <div class="palette-preview">
+                                    <div class="palette-color" style="background: #00c853;"></div>
+                                    <div class="palette-color" style="background: #ffeb3b;"></div>
+                                    <div class="palette-color" style="background: #ff1744;"></div>
+                                </div>
+                                <span class="palette-name">Vibrant</span>
+                            </label>
+                            <label class="palette-option">
+                                <input type="radio" name="palette" value="custom">
+                                <div class="palette-preview" id="customPalettePreview">
+                                    <div class="palette-color" id="customMorningPreview" style="background: #22c55e;"></div>
+                                    <div class="palette-color" id="customNoonPreview" style="background: #f59e0b;"></div>
+                                    <div class="palette-color" id="customNightPreview" style="background: #3b82f6;"></div>
+                                </div>
+                                <span class="palette-name">Custom</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Base Colors -->
+                    <div class="color-section">
+                        <h3 class="color-section-title">Base Colors</h3>
+                        <div class="color-inputs">
+                            <div class="color-input-group">
+                                <label for="morningColor">Morning</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="morningColor" name="morningColor" value="#22c55e">
+                                    <input type="text" id="morningColorText" class="color-text" value="#22c55e" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="color-input-group">
+                                <label for="noonColor">Noon</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="noonColor" name="noonColor" value="#f59e0b">
+                                    <input type="text" id="noonColorText" class="color-text" value="#f59e0b" maxlength="7">
+                                </div>
+                            </div>
+                            <div class="color-input-group">
+                                <label for="nightColor">Night</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="nightColor" name="nightColor" value="#3b82f6">
+                                    <input type="text" id="nightColorText" class="color-text" value="#3b82f6" maxlength="7">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Combined Colors -->
+                    <div class="color-section">
+                        <h3 class="color-section-title">Combined Colors</h3>
+                        <div class="color-inputs">
+                            <div class="color-input-group">
+                                <label for="morningNoonColor">Morning + Noon</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="morningNoonColor" name="morningNoonColor" value="#84cc16">
+                                    <input type="text" id="morningNoonColorText" class="color-text" value="#84cc16" maxlength="7">
+                                </div>
+                                <label class="custom-toggle">
+                                    <input type="checkbox" id="customMorningNoon">
+                                    <span>Custom</span>
+                                </label>
+                            </div>
+                            <div class="color-input-group">
+                                <label for="morningNightColor">Morning + Night</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="morningNightColor" name="morningNightColor" value="#06b6d4">
+                                    <input type="text" id="morningNightColorText" class="color-text" value="#06b6d4" maxlength="7">
+                                </div>
+                                <label class="custom-toggle">
+                                    <input type="checkbox" id="customMorningNight">
+                                    <span>Custom</span>
+                                </label>
+                            </div>
+                            <div class="color-input-group">
+                                <label for="noonNightColor">Noon + Night</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="noonNightColor" name="noonNightColor" value="#8b5cf6">
+                                    <input type="text" id="noonNightColorText" class="color-text" value="#8b5cf6" maxlength="7">
+                                </div>
+                                <label class="custom-toggle">
+                                    <input type="checkbox" id="customNoonNight">
+                                    <span>Custom</span>
+                                </label>
+                            </div>
+                            <div class="color-input-group">
+                                <label for="allDayColor">All Day</label>
+                                <div class="color-picker-wrapper">
+                                    <input type="color" id="allDayColor" name="allDayColor" value="#6366f1">
+                                    <input type="text" id="allDayColorText" class="color-text" value="#6366f1" maxlength="7">
+                                </div>
+                                <label class="custom-toggle">
+                                    <input type="checkbox" id="customAllDay">
+                                    <span>Custom</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Colors</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeColorModal()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      
         <footer role="contentinfo">
             <p>&copy; 2024 Medicine List Generator</p>
         </footer>
@@ -328,6 +474,7 @@
     <script src="/static/script.js"></script>
     <script src="/static/ocr.js"></script>
     <script src="/static/auth.js"></script>
+    <script src="/static/colors.js"></script>
     <script>
         // Initialize logout button - execute immediately (DOMContentLoaded already fired)
         const logoutBtn = document.getElementById('logoutBtn');
