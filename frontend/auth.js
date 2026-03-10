@@ -227,15 +227,35 @@ async function getCurrentUser() {
     }
 }
 
+// Helper function to get CSRF token from cookies
+function getCSRFToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+
 // Logout function
 async function logout() {
     try {
         // Clear all localStorage data to prevent data leakage between users
         localStorage.clear();
         
+        // Prepare headers with CSRF token
+        const headers = {};
+        const csrfToken = getCSRFToken();
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
         // Call backend logout to clear session
         await fetch('/api/logout/', {
             method: 'POST',
+            headers: headers,
             credentials: 'include'
         });
         

@@ -48,7 +48,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="dose">Dosage</label>
-                                <input type="text" id="dose" name="dose" required placeholder="e.g. 50mg">
+                                <input type="text" id="dose" name="dose" placeholder="e.g. 50mg">
                             </div>
                         </div>
 
@@ -145,11 +145,21 @@
                     </div>
                 </div>
 
-                <div class="medicine-list" id="medicineList">
-                    <div class="empty-state">
-                        <div class="empty-icon">💊</div>
-                        <p>No medicines added yet</p>
-                        <p style="font-size: 1rem; color: var(--text-light); margin-top: 0.5rem;">Use the form above to add medicines to your schedule</p>
+                <div class="medicine-list-wrapper">
+                    <div class="medicine-list" id="medicineList">
+                        <div class="empty-state">
+                            <div class="empty-icon">💊</div>
+                            <p>No medicines added yet</p>
+                            <p style="font-size: 1rem; color: var(--text-light); margin-top: 0.5rem;">Use the form above to add medicines to your schedule</p>
+                        </div>
+                    </div>
+                    <div class="scroll-indicator" id="scrollIndicator" aria-hidden="true">
+                        <div class="scroll-indicator-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+                            </svg>
+                        </div>
+                        <span class="scroll-indicator-text">Scroll down for more</span>
                     </div>
                 </div>
 

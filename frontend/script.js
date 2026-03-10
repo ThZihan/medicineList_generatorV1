@@ -157,6 +157,12 @@ clearFormBtn.addEventListener('click', clearForm);
 clearAllBtn.addEventListener('click', handleClearAll);
 generatePDFBtn.addEventListener('click', generatePDF);
 
+// Edit form event listener
+const editMedicineForm = document.getElementById('editMedicineForm');
+if (editMedicineForm) {
+    editMedicineForm.addEventListener('submit', handleEditFormSubmit);
+}
+
 // Form Submission Handler
 async function handleFormSubmit(e) {
     e.preventDefault();
@@ -293,6 +299,140 @@ async function deleteMedicine(id) {
     }
 }
 
+// Edit Medicine
+async function editMedicine(id) {
+    // Find the medicine in the local array
+    const medicine = medicines.find(med => med.id === id);
+    
+    if (!medicine) {
+        showNotification('Medicine not found', 'error');
+        return;
+    }
+    
+    // Populate the edit form with medicine data
+    document.getElementById('editMedicineId').value = medicine.id;
+    document.getElementById('editMedicineName').value = medicine.medicineName;
+    document.getElementById('editGenericName').value = medicine.genericName || '';
+    document.getElementById('editDose').value = medicine.dose;
+    document.getElementById('editFrequency').value = medicine.frequency;
+    document.getElementById('editUsedFor').value = medicine.usedFor || '';
+    
+    // Set timing checkboxes
+    const timingCheckboxes = document.querySelectorAll('input[name="editTiming"]');
+    timingCheckboxes.forEach(checkbox => {
+        checkbox.checked = medicine.timing.includes(checkbox.value);
+    });
+    
+    // Set food timing radio
+    const foodTimingRadios = document.querySelectorAll('input[name="editFoodTiming"]');
+    foodTimingRadios.forEach(radio => {
+        radio.checked = radio.value === medicine.foodTiming;
+    });
+    
+    // Set remarks checkboxes
+    const remarksCheckboxes = document.querySelectorAll('input[name="editRemarks"]');
+    remarksCheckboxes.forEach(checkbox => {
+        checkbox.checked = medicine.remarks.includes(checkbox.value);
+    });
+    
+    // Set custom remarks (filter out predefined remarks)
+    const predefinedRemarks = ['Complete full course', 'Not to lie down for 1 hour', 'Take with plenty of water'];
+    const customRemarks = medicine.remarks.filter(r => !predefinedRemarks.includes(r));
+    document.getElementById('editCustomRemarks').value = customRemarks.join(', ');
+    
+    // Show the modal
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+// Close Edit Modal
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    document.getElementById('editMedicineForm').reset();
+}
+
+// Handle Edit Form Submission
+async function handleEditFormSubmit(e) {
+    e.preventDefault();
+    
+    const medicineId = parseInt(document.getElementById('editMedicineId').value);
+    
+    const timingCheckboxes = document.querySelectorAll('input[name="editTiming"]:checked');
+    const timing = Array.from(timingCheckboxes).map(cb => cb.value);
+    
+    const foodTimingRadio = document.querySelector('input[name="editFoodTiming"]:checked');
+    const foodTiming = foodTimingRadio ? foodTimingRadio.value : '';
+    
+    const remarksCheckboxes = document.querySelectorAll('input[name="editRemarks"]:checked');
+    const remarks = Array.from(remarksCheckboxes).map(cb => cb.value);
+    
+    if (document.getElementById('editCustomRemarks').value.trim()) {
+        remarks.push(document.getElementById('editCustomRemarks').value.trim());
+    }
+    
+    if (timing.length === 0) {
+        showNotification('Please select at least one time (Morning/Noon/Night)', 'error');
+        return;
+    }
+    
+    // Convert timing array to schedule string (e.g., "1-0-0" for morning only)
+    let morning = '0';
+    let noon = '0';
+    let night = '0';
+    
+    if (timing.includes('morning')) morning = '1';
+    if (timing.includes('noon')) noon = '1';
+    if (timing.includes('night')) night = '1';
+    
+    const schedule = `${morning}-${noon}-${night}`;
+    
+    // Prepare medicine data for backend
+    const medicineData = {
+        medicine_name: document.getElementById('editMedicineName').value.trim(),
+        generic_name: document.getElementById('editGenericName').value.trim(),
+        dose: document.getElementById('editDose').value.trim(),
+        instructions: remarks.join(', '),
+        cycle: document.getElementById('editFrequency').value,
+        schedule: schedule,
+        with_food: foodTiming,
+        indication: document.getElementById('editUsedFor').value.trim()
+    };
+    
+    // Update medicine in backend
+    const result = await updateMedicineInBackend(medicineId, medicineData);
+    
+    if (result.success) {
+        // Update the medicine in local state
+        const medicineIndex = medicines.findIndex(med => med.id === medicineId);
+        if (medicineIndex !== -1) {
+            medicines[medicineIndex] = {
+                id: medicineId,
+                medicineName: result.medicine.medicine_name,
+                genericName: result.medicine.generic_name,
+                dose: result.medicine.dose,
+                timing: timing,
+                frequency: document.getElementById('editFrequency').value,
+                foodTiming: foodTiming,
+                usedFor: document.getElementById('editUsedFor').value.trim(),
+                remarks: remarks,
+                createdAt: medicines[medicineIndex].createdAt
+            };
+        }
+        
+        updateMedicineList();
+        closeEditModal();
+        showNotification('Medicine updated successfully!', 'success');
+    } else {
+        if (result.message && result.message.includes('Not authenticated')) {
+            showNotification('Session expired. Please login again.', 'error');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        } else {
+            showNotification(result.message || 'Failed to update medicine', 'error');
+        }
+    }
+}
+
 // Get timing string
 function getTimingString(timing) {
     let morning = '0';
@@ -347,25 +487,76 @@ function getTimingPriority(timing) {
 // SUB-GROUPING SYSTEM
 // ===================================
 
-// Base RGB colors for time-of-day
-const TIMING_COLORS = {
-    morning: { r: 134, g: 239, b: 172 },  // Green
-    noon: { r: 253, g: 186, b: 116 },      // Orange
-    night: { r: 147, g: 197, b: 253 }      // Blue
-};
+// Helper function to convert hex to RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
 
-// Lighter base shades (for baseline entries - all parameters match)
-const LIGHT_BASE_SHADES = {
-    morning: '#e1eed9',
-    noon: '#fae3d4',
-    night: '#deeaf6'
-};
+// Get timing colors from current color preferences
+function getTimingColors() {
+    // Try to get colors from color preferences module
+    if (typeof getCurrentColorPreferences === 'function') {
+        const prefs = getCurrentColorPreferences();
+        return {
+            morning: hexToRgb(prefs.base_colors.morning) || { r: 134, g: 239, b: 172 },
+            noon: hexToRgb(prefs.base_colors.noon) || { r: 253, g: 186, b: 116 },
+            night: hexToRgb(prefs.base_colors.night) || { r: 147, g: 197, b: 253 }
+        };
+    }
+    
+    // Fallback to default colors
+    return {
+        morning: { r: 134, g: 239, b: 172 },  // Green
+        noon: { r: 253, g: 186, b: 116 },      // Orange
+        night: { r: 147, g: 197, b: 253 }      // Blue
+    };
+}
+
+// Get light base shades from current color preferences
+function getLightBaseShades() {
+    // Try to get colors from color preferences module
+    if (typeof getCurrentColorPreferences === 'function') {
+        const prefs = getCurrentColorPreferences();
+        return {
+            morning: lightenColor(prefs.base_colors.morning, 0.85),
+            noon: lightenColor(prefs.base_colors.noon, 0.85),
+            night: lightenColor(prefs.base_colors.night, 0.85)
+        };
+    }
+    
+    // Fallback to default colors
+    return {
+        morning: '#e1eed9',
+        noon: '#fae3d4',
+        night: '#deeaf6'
+    };
+}
+
+// Helper function to lighten a hex color
+function lightenColor(hex, factor) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return hex;
+    
+    const r = Math.min(255, Math.round(rgb.r + (255 - rgb.r) * factor));
+    const g = Math.min(255, Math.round(rgb.g + (255 - rgb.g) * factor));
+    const b = Math.min(255, Math.round(rgb.b + (255 - rgb.b) * factor));
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
 
 // Blend RGB colors based on active timing slots
 function blendTimingColors(timing) {
     const hasMorning = timing.includes('morning');
     const hasNoon = timing.includes('noon');
     const hasNight = timing.includes('night');
+    
+    // Get current timing colors
+    const TIMING_COLORS = getTimingColors();
     
     // Count how many timing options are selected
     const timingCount = (hasMorning ? 1 : 0) + (hasNoon ? 1 : 0) + (hasNight ? 1 : 0);
@@ -507,6 +698,9 @@ function getSubgroupColor(med) {
     // Get the blended base color from timing
     const baseColor = blendTimingColors(med.timing);
     const variations = countParameterVariations(med);
+    
+    // Get light base shades from current color preferences
+    const LIGHT_BASE_SHADES = getLightBaseShades();
     
     // If 0 variations (baseline), use the lighter base shades
     if (variations === 0) {
@@ -656,15 +850,20 @@ function updateMedicineList() {
                     <div class="medicine-name" style="color: #000000;">${escapeHtml(med.medicineName)}</div>
                     ${med.genericName ? `<div class="medicine-generic" style="color: #000000;">${escapeHtml(med.genericName)}</div>` : ''}
                 </div>
-                <button onclick="deleteMedicine(${med.id})" style="background: transparent; border: none; color: #000000; cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: all 0.2s ease; font-size: 1.125rem;" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.color='#000000'" onmouseout="this.style.background='transparent'; this.style.color='#000000'">×</button>
+                <div style="display: flex; gap: 0.25rem;">
+                    <button onclick="editMedicine(${med.id})" style="background: transparent; border: none; color: #000000; cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: all 0.2s ease; font-size: 1rem;" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.color='#000000'" onmouseout="this.style.background='transparent'; this.style.color='#000000'" title="Edit medicine">✎</button>
+                    <button onclick="deleteMedicine(${med.id})" style="background: transparent; border: none; color: #000000; cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: all 0.2s ease; font-size: 1.125rem;" onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.color='#000000'" onmouseout="this.style.background='transparent'; this.style.color='#000000'" title="Delete medicine">×</button>
+                </div>
             </div>
             
             <div class="medicine-details">
+                ${med.dose ? `
                 <div class="medicine-detail">
                     <strong style="color: #000000;">Dosage</strong>
                     <span style="color: #000000;">${escapeHtml(med.dose)}</span>
                     <span class="subgroup-indicator" style="background: #000000;"></span>
                 </div>
+                ` : ''}
                 <div class="medicine-detail">
                     <strong style="color: #000000;">Schedule</strong>
                     <span style="color: #000000;">${getTimingString(med.timing)}</span>
@@ -697,7 +896,46 @@ function updateMedicineList() {
             ` : ''}
         </div>
     `).join('');
+    
+    // Check for scroll overflow and update scroll indicator
+    updateScrollIndicator();
 }
+
+// Update scroll indicator visibility based on scroll state
+function updateScrollIndicator() {
+    const wrapper = medicineList.closest('.medicine-list-wrapper');
+    if (!wrapper) return;
+    
+    // Check if there's overflow content
+    const hasOverflow = medicineList.scrollHeight > medicineList.clientHeight;
+    
+    if (hasOverflow) {
+        wrapper.classList.add('has-overflow');
+    } else {
+        wrapper.classList.remove('has-overflow');
+        wrapper.classList.remove('at-bottom');
+        return;
+    }
+    
+    // Check if scrolled to bottom
+    const isAtBottom = medicineList.scrollTop + medicineList.clientHeight >= medicineList.scrollHeight - 10;
+    
+    if (isAtBottom) {
+        wrapper.classList.add('at-bottom');
+    } else {
+        wrapper.classList.remove('at-bottom');
+    }
+    
+    // Position scroll indicator at bottom of visible area
+    const scrollIndicator = wrapper.querySelector('.scroll-indicator');
+    if (scrollIndicator) {
+        const wrapperHeight = wrapper.clientHeight;
+        scrollIndicator.style.top = (wrapperHeight - scrollIndicator.offsetHeight) + 'px';
+    }
+}
+
+// Add scroll event listener to medicine list
+medicineList.addEventListener('scroll', updateScrollIndicator);
 
 // Update Medicine Count
 function updateMedicineCount() {
@@ -733,9 +971,9 @@ async function generatePDF() {
         const textColor = [26, 26, 26];
         const lightColor = [107, 114, 128];
         
-        const timingMorning = [34, 197, 94];
-        const timingNoon = [251, 191, 36];
-        const timingMornNoon = [132, 204, 22];
+        // Get current timing colors for PDF
+        const TIMING_COLORS_PDF = getTimingColors();
+        const LIGHT_BASE_SHADES_PDF = getLightBaseShades();
         
         // Helper function to blend timing colors for PDF
         function blendTimingColorsForPDF(timing) {
@@ -746,27 +984,27 @@ async function generatePDF() {
             const timingCount = (hasMorning ? 1 : 0) + (hasNoon ? 1 : 0) + (hasNight ? 1 : 0);
             
             if (timingCount === 1) {
-                if (hasMorning) return TIMING_COLORS.morning;
-                if (hasNoon) return TIMING_COLORS.noon;
-                if (hasNight) return TIMING_COLORS.night;
+                if (hasMorning) return TIMING_COLORS_PDF.morning;
+                if (hasNoon) return TIMING_COLORS_PDF.noon;
+                if (hasNight) return TIMING_COLORS_PDF.night;
             }
             
             let totalR = 0, totalG = 0, totalB = 0;
             
             if (hasMorning) {
-                totalR += TIMING_COLORS.morning.r;
-                totalG += TIMING_COLORS.morning.g;
-                totalB += TIMING_COLORS.morning.b;
+                totalR += TIMING_COLORS_PDF.morning.r;
+                totalG += TIMING_COLORS_PDF.morning.g;
+                totalB += TIMING_COLORS_PDF.morning.b;
             }
             if (hasNoon) {
-                totalR += TIMING_COLORS.noon.r;
-                totalG += TIMING_COLORS.noon.g;
-                totalB += TIMING_COLORS.noon.b;
+                totalR += TIMING_COLORS_PDF.noon.r;
+                totalG += TIMING_COLORS_PDF.noon.g;
+                totalB += TIMING_COLORS_PDF.noon.b;
             }
             if (hasNight) {
-                totalR += TIMING_COLORS.night.r;
-                totalG += TIMING_COLORS.night.g;
-                totalB += TIMING_COLORS.night.b;
+                totalR += TIMING_COLORS_PDF.night.r;
+                totalG += TIMING_COLORS_PDF.night.g;
+                totalB += TIMING_COLORS_PDF.night.b;
             }
             
             return {
@@ -774,6 +1012,12 @@ async function generatePDF() {
                 g: Math.round(totalG / timingCount),
                 b: Math.round(totalB / timingCount)
             };
+        }
+        
+        // Helper function to convert hex color string to RGB array for PDF
+        function hexToRgbArray(hex) {
+            const rgb = hexToRgb(hex);
+            return [rgb.r, rgb.g, rgb.b];
         }
         
         function getRowColor(med) {
@@ -793,22 +1037,25 @@ async function generatePDF() {
                 const timingCount = (hasMorning ? 1 : 0) + (hasNoon ? 1 : 0) + (hasNight ? 1 : 0);
                 
                 if (timingCount === 1) {
-                    if (hasMorning) return [225, 238, 217]; // #e1eed9
-                    if (hasNoon) return [250, 227, 212]; // #fae3d4
-                    if (hasNight) return [222, 234, 246]; // #deeaf6
+                    if (hasMorning) return hexToRgbArray(LIGHT_BASE_SHADES_PDF.morning);
+                    if (hasNoon) return hexToRgbArray(LIGHT_BASE_SHADES_PDF.noon);
+                    if (hasNight) return hexToRgbArray(LIGHT_BASE_SHADES_PDF.night);
                 }
                 
                 // For mixed timing with 0 variations, blend the light base shades
                 let totalR = 0, totalG = 0, totalB = 0;
                 
                 if (hasMorning) {
-                    totalR += 225; totalG += 238; totalB += 217;
+                    const rgb = hexToRgb(LIGHT_BASE_SHADES_PDF.morning);
+                    totalR += rgb.r; totalG += rgb.g; totalB += rgb.b;
                 }
                 if (hasNoon) {
-                    totalR += 250; totalG += 227; totalB += 212;
+                    const rgb = hexToRgb(LIGHT_BASE_SHADES_PDF.noon);
+                    totalR += rgb.r; totalG += rgb.g; totalB += rgb.b;
                 }
                 if (hasNight) {
-                    totalR += 222; totalG += 234; totalB += 246;
+                    const rgb = hexToRgb(LIGHT_BASE_SHADES_PDF.night);
+                    totalR += rgb.r; totalG += rgb.g; totalB += rgb.b;
                 }
                 
                 return [
@@ -855,7 +1102,18 @@ async function generatePDF() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         const patientName = inputs.patientName.value.trim() || 'Patient Name';
-        doc.text(patientName, margin, 15);
+        const patientAge = inputs.patientAge.value.trim() || '';
+        
+        if (patientAge) {
+            // Combine name and age on same line with smaller font for age
+            const nameWidth = doc.getTextWidth(patientName);
+            doc.text(patientName, margin, 15);
+            doc.setFontSize(12);
+            doc.text(` (${patientAge} yrs)`, margin + nameWidth + 2, 15);
+            doc.setFontSize(18); // Reset font size
+        } else {
+            doc.text(patientName, margin, 15);
+        }
         
         const date = new Date();
         const dateStr = date.toLocaleDateString('en-US', {
@@ -945,7 +1203,7 @@ async function generatePDF() {
             body: tableData,
             theme: 'grid',
             styles: {
-                fontSize: 9,
+                fontSize: 10,
                 cellPadding: 3,
                 textColor: [0, 0, 0],
                 lineColor: [200, 200, 200],
@@ -959,15 +1217,20 @@ async function generatePDF() {
                 fillColor: headerColor,
                 textColor: [0, 0, 0],
                 fontStyle: 'bold',
-                fontSize: 9,
+                fontSize: 11,
                 halign: 'center'
+            },
+            columnStyles: {
+                4: { cellWidth: 45 }, // Instructions column (index 4)
+                3: { cellWidth: 15 }
             },
             margin: { top: 30, right: 0, bottom: margin, left: 0 },
             didParseCell: function(data) {
                 if (data.section === 'body') {
                     const med = medicines[data.row.index];
                     data.cell.styles.fillColor = getRowColor(med);
-                    data.cell.styles.textColor = getTextColorForPDF(data.cell.styles.fillColor);
+                    // Always use black text for all table data
+                    data.cell.styles.textColor = [0, 0, 0];
                 }
             },
             didDrawPage: function(data) {
@@ -1370,6 +1633,41 @@ async function deleteFromBackend(medicineId) {
         return data;
     } catch (error) {
         console.error('Error deleting medicine:', error);
+        return { success: false, message: 'Network error' };
+    }
+}
+
+// Update medicine in backend
+async function updateMedicineInBackend(medicineId, medicineData) {
+    try {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Add CSRF token if available
+        const csrfToken = getCSRFToken();
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/medicines/${medicineId}/update/`, {
+            method: 'PUT',
+            headers: headers,
+            credentials: 'include',
+            body: JSON.stringify(medicineData)
+        });
+        
+        // Handle authentication errors
+        if (response.status === 401 || response.status === 403) {
+            console.error('User not authenticated or CSRF error');
+            const data = await response.json();
+            return { success: false, message: data.message || 'Not authenticated' };
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error updating medicine:', error);
         return { success: false, message: 'Network error' };
     }
 }

@@ -2,17 +2,9 @@
 // MEDICINE LIST GENERATOR - OCR MODULE
 // Google Gemini API Integration
 // ===================================
-
-const GEMINI_MODEL_NAME = 'gemini-2.5-flash';
-// SECURITY WARNING: API key is hardcoded and visible in client-side code
-// For production, consider:
-// 1. Moving API calls to backend (recommended)
-// 2. Using environment variables
-// 3. Using a proxy server
-const GEMINI_API_KEY = 'AIzaSyC3e0oJebdSKdlNRNYrYOwxGjhX433zmVA'; // Your working key
-
-// Note: Newer models like 2.5 often require the 'v1beta' endpoint
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent`;
+// SECURITY: API calls are now proxied through backend to protect the API key
+// The frontend sends image data to /api/ocr/scan/ which calls Gemini API
+// with the server-side API key (stored in backend environment variable)
 
 // DOM Elements
 let ocrModal = null;
@@ -23,35 +15,15 @@ let extractedMedicines = [];
 
 // Initialize OCR functionality
 function initOCR() {
-    // Create OCR button
-    const formActions = document.querySelector('.form-actions');
-    if (formActions) {
-        const ocrButton = createOCRButton();
-        formActions.insertBefore(ocrButton, formActions.firstChild);
+    // Create OCR button - now placed in patient section
+    const ocrTriggerBtn = document.getElementById('ocrTriggerBtn');
+    if (ocrTriggerBtn) {
+        ocrTriggerBtn.onclick = openOCRModal;
     }
     
     // Create modal and file input
     createOCRModal();
     createFileInput();
-}
-
-// Create OCR Button
-function createOCRButton() {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'btn btn-ocr';
-    button.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/>
-            <line x1="16" y1="5" x2="22" y2="5"/>
-            <line x1="19" y1="2" x2="19" y2="8"/>
-            <circle cx="9" cy="9" r="2"/>
-            <path d="m21 15-3.086-3.086a2 2 0 0-2.828 0L6 21"/>
-        </svg>
-        Extract from Image
-    `;
-    button.onclick = openOCRModal;
-    return button;
 }
 
 // Create OCR Modal
@@ -223,9 +195,8 @@ async function scanPrescription() {
         const base64Data = imageData.split(',')[1];
         const mimeType = imageData.substring(5, imageData.indexOf(';'));
         
-        // Strategy: Try the newest, fastest model. If 404, the service is likely off.
-        // Using only available models from the API
-        const modelsToTry = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-flash-latest"];
+        // Try models in order (backend will handle fallback)
+        const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
         
         let success = false;
         let finalData = null;
@@ -236,39 +207,27 @@ async function scanPrescription() {
             console.log(`Attempting OCR with model: ${modelName}...`);
             
             try {
-                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-                
-                const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
+                // Call backend proxy instead of direct API call
+                const response = await fetch('/api/ocr/scan/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
                     body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { inline_data: { mime_type: mimeType, data: base64Data } },
-                                { text: getExtractionPrompt() }
-                            ]
-                        }],
-                        safetySettings: [
-                            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                        ]
+                        image: base64Data,
+                        model: modelName,
+                        mimeType: mimeType
                     })
                 });
                 
-                if (response.status === 404) {
-                    console.warn(`Model ${modelName} returned 404 (Not Found). Checking next...`);
-                    continue;
-                }
-                
                 if (!response.ok) {
                     const err = await response.json();
-                    throw new Error(err.error?.message || response.statusText);
+                    throw new Error(err.error || response.statusText);
                 }
                 
                 const result = await response.json();
-                finalData = extractMedicineData(result); // Parse immediately
+                finalData = extractMedicineData(result.data); // Parse from backend response
                 
                 if (finalData) {
                     success = true;
@@ -278,9 +237,6 @@ async function scanPrescription() {
                 console.error(`Attempt failed for ${modelName}:`, innerError);
             }
         }
-        
-        // === THIS WAS THE BUGGY PART IN YOUR OLD CODE ===
-        // We only process if success is true.
         
         hideScanningOverlay();
         
@@ -292,8 +248,7 @@ async function scanPrescription() {
             hideScanningOverlay();
             alert("No medicines were detected in the image. Please try with a clearer prescription image.");
         } else {
-            // If we get here, ALL attempts failed.
-            alert("OCR Failed. \n\nMost likely cause: The 'Generative Language API' is not enabled in your Google Cloud Console for this project.\n\nPlease check the console (F12) for detailed logs.");
+            alert("OCR Failed. Please try again or contact support if the issue persists.");
         }
         
     } catch (fatalError) {
@@ -301,6 +256,22 @@ async function scanPrescription() {
         console.error('Fatal OCR Error:', fatalError);
         alert(`System Error: ${fatalError.message}`);
     }
+}
+
+// Helper function to get CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // Get extraction prompt for Gemini API
@@ -390,6 +361,41 @@ function extractMedicineData(result) {
             if (!validFoodTimings.includes(med.foodTiming)) {
                 console.log('Invalid foodTiming, defaulting to AFTER FOOD. Got:', med.foodTiming);
                 med.foodTiming = 'AFTER FOOD';
+            }
+            
+            // Parse schedule from remarks (e.g., "1+0+1" means morning+noon+night)
+            if (med.remarks) {
+                const scheduleMatch = med.remarks.match(/(\d)\+(\d)\+(\d)/);
+                if (scheduleMatch) {
+                    const morning = parseInt(scheduleMatch[1]);
+                    const noon = parseInt(scheduleMatch[2]);
+                    const night = parseInt(scheduleMatch[3]);
+                    
+                    med.timing = [];
+                    if (morning > 0) med.timing.push('morning');
+                    if (noon > 0) med.timing.push('noon');
+                    if (night > 0) med.timing.push('night');
+                    
+                    console.log(`Parsed schedule "${scheduleMatch[0]}" to timing:`, med.timing);
+                }
+            }
+            
+            // If no timing found from schedule, try to parse from text in remarks
+            if (!med.timing && med.remarks) {
+                const remarksLower = med.remarks.toLowerCase();
+                med.timing = [];
+                if (remarksLower.includes('morning') || remarksLower.includes('am')) {
+                    med.timing.push('morning');
+                }
+                if (remarksLower.includes('noon') || remarksLower.includes('afternoon') || remarksLower.includes('lunch')) {
+                    med.timing.push('noon');
+                }
+                if (remarksLower.includes('night') || remarksLower.includes('evening') || remarksLower.includes('pm') || remarksLower.includes('bedtime')) {
+                    med.timing.push('night');
+                }
+                if (med.timing.length > 0) {
+                    console.log(`Parsed timing from remarks text:`, med.timing);
+                }
             }
         });
         
@@ -544,6 +550,12 @@ function createMedicineCard(med, index) {
     const hasStayUpright = remarksLower.includes('not to lie down') || remarksLower.includes('stay upright');
     const hasTakeWithWater = remarksLower.includes('take with water') || remarksLower.includes('plenty of water');
     
+    // Check if there are any specific instructions in remarks
+    const hasAnyInstruction = hasCompleteCourse || hasStayUpright || hasTakeWithWater;
+    
+    // Default to "Complete full course" if no remarks or no specific instructions
+    const shouldDefaultCompleteCourse = !remarks || !hasAnyInstruction;
+    
     // Custom remarks (anything not matching predefined options)
     let customRemarks = remarks;
     if (hasCompleteCourse) {
@@ -638,7 +650,7 @@ function createMedicineCard(med, index) {
                 <label>Instructions</label>
                 <div class="remarks-group">
                     <label class="checkbox-label">
-                        <input type="checkbox" class="extracted-remarks" data-field="remarks" value="Complete full course" ${hasCompleteCourse ? 'checked' : ''}>
+                        <input type="checkbox" class="extracted-remarks" data-field="remarks" value="Complete full course" ${hasCompleteCourse || shouldDefaultCompleteCourse ? 'checked' : ''}>
                         <span>Complete full course</span>
                     </label>
                     <label class="checkbox-label">
@@ -710,6 +722,12 @@ async function submitAllExtractedMedicines() {
         // Get timing checkboxes
         const timingCheckboxes = card.querySelectorAll('.extracted-timing:checked');
         medicine.timing = Array.from(timingCheckboxes).map(cb => cb.value);
+        
+        // Validate: At least one timing must be selected
+        if (medicine.timing.length === 0) {
+            alert(`Medicine ${cardIndex + 1} (${medicineName}): Please select at least one time (Morning/Noon/Night) to take the medicine.`);
+            return;
+        }
         
         // Get remarks
         const remarksCheckboxes = card.querySelectorAll('.extracted-remarks:checked');
