@@ -23,7 +23,8 @@ from medicines.views import (
     serve_index_page, serve_static_file, get_user_medicines,
     add_user_medicine, delete_user_medicine, update_user_medicine,
     get_patient_profile, update_patient_profile,
-    get_color_preferences, save_color_preferences, get_available_palettes
+    get_color_preferences, save_color_preferences, get_available_palettes,
+    ocr_scan_prescription
 )
 
 urlpatterns = [
@@ -40,6 +41,7 @@ urlpatterns = [
     path('api/colors/preferences/', get_color_preferences, name='get_color_preferences'),
     path('api/colors/preferences/save/', save_color_preferences, name='save_color_preferences'),
     path('api/colors/palettes/', get_available_palettes, name='get_available_palettes'),
+    path('api/ocr/scan/', ocr_scan_prescription, name='ocr_scan'),
     path('login/', serve_login_page, name='login_page'),
     path('', serve_login_page, name='home'),
     path('index/', serve_index_page, name='index_page'),

@@ -7,7 +7,11 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 import os
 import json
+import requests
+import logging
 from .models import Patient, UserMedicine, UserColorPreferences
+
+logger = logging.getLogger(__name__)
 
 
 @csrf_exempt
@@ -885,3 +889,170 @@ def calculate_combined_colors(morning_color, noon_color, night_color):
         'noon_night': noon_night,
         'all_day': all_day
     }
+
+
+@csrf_exempt
+@ensure_csrf_cookie
+@login_required
+@require_http_methods(["POST"])
+def ocr_scan_prescription(request):
+    """
+    Proxy endpoint for Gemini OCR API calls.
+    Frontend sends image data, backend adds API key and calls Gemini API.
+    
+    This endpoint:
+    - Requires user authentication
+    - Validates image data
+    - Calls Gemini API with server-side API key
+    - Returns parsed medicine data
+    """
+    try:
+        # Parse request body (decode bytes to string first)
+        import json
+        body_str = request.body.decode('utf-8')
+        data = json.loads(body_str)
+        image_data = data.get('image')
+        model = data.get('model', 'gemini-flash-latest')
+        mime_type = data.get('mimeType', 'image/jpeg')
+        
+        # Validate request
+        if not image_data:
+            logger.warning(f'OCR request from user {request.user.username} missing image data')
+            return JsonResponse({
+                'success': False,
+                'error': 'No image data provided'
+            }, status=400)
+        
+        # Validate image size (max 10MB base64 encoded)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if len(image_data) > max_size:
+            logger.warning(f'OCR request from user {request.user.username} exceeded size limit: {len(image_data)} bytes')
+            return JsonResponse({
+                'success': False,
+                'error': 'Image size exceeds 10MB limit'
+            }, status=400)
+        
+        # Validate mime type
+        valid_mime_types = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+        if mime_type not in valid_mime_types:
+            return JsonResponse({
+                'success': False,
+                'error': f'Invalid image type. Supported types: {", ".join(valid_mime_types)}'
+            }, status=400)
+        
+        # Check if API key is configured
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            logger.error('GEMINI_API_KEY not configured in settings')
+            return JsonResponse({
+                'success': False,
+                'error': 'OCR service not configured. Please contact administrator.'
+            }, status=500)
+        
+        # Construct the OCR prompt
+        ocr_prompt = """You are a medical prescription OCR system. Extract ALL medicines found in this prescription image and return ONLY valid JSON in this exact format:
+
+{
+    "medicines": [
+        {
+            "medicineName": "string (exact medicine name from image)",
+            "genericName": "string or null (generic name if visible)",
+            "dose": "string (e.g., '500mg', '50mg', '10mg')",
+            "frequency": "Daily" | "per NEED" | "Weekly" | "Only Friday" | "Except WED & THUR",
+            "foodTiming": "BEFORE FOOD" | "AFTER FOOD",
+            "usedFor": "string (indication/reason for medicine)",
+            "remarks": "string (any special instructions like '1+0+1' schedule)"
+        }
+    ]
+}
+
+Important rules:
+1. Return ONLY the JSON, no additional text
+2. Parse schedule from remarks like "1+0+1" (morning+noon+night)
+3. Include all medicines visible in the prescription
+4. If dose is just a number without unit, add 'mg' by default
+5. Extract timing information from schedule patterns or text mentions
+"""
+        
+        # Call Gemini API with server-side API key
+        api_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
+        
+        logger.info(f'Calling Gemini API for user {request.user.username} with model {model}')
+        
+        response = requests.post(
+            api_url,
+            params={'key': api_key},
+            headers={'Content-Type': 'application/json'},
+            json={
+                'contents': [{
+                    'parts': [
+                        {'inline_data': {'mime_type': mime_type, 'data': image_data}},
+                        {'text': ocr_prompt}
+                    ]
+                }],
+                'safetySettings': [
+                    {'category': 'HARM_CATEGORY_HARASSMENT', 'threshold': 'BLOCK_NONE'},
+                    {'category': 'HARM_CATEGORY_HATE_SPEECH', 'threshold': 'BLOCK_NONE'},
+                    {'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold': 'BLOCK_NONE'},
+                    {'category': 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold': 'BLOCK_NONE'}
+                ]
+            },
+            timeout=30
+        )
+        
+        # Handle API response
+        if response.status_code == 200:
+            logger.info(f'Gemini API success for user {request.user.username}')
+            return JsonResponse({
+                'success': True,
+                'data': response.json()
+            })
+        
+        elif response.status_code == 403:
+            logger.error(f'Gemini API 403 Forbidden - API key issue')
+            return JsonResponse({
+                'success': False,
+                'error': 'API access denied. Please contact administrator.'
+            }, status=500)
+        
+        elif response.status_code == 429:
+            logger.warning(f'Gemini API 429 Rate limit exceeded for user {request.user.username}')
+            return JsonResponse({
+                'success': False,
+                'error': 'Rate limit exceeded. Please try again later.'
+            }, status=429)
+        
+        else:
+            logger.error(f'Gemini API error {response.status_code}: {response.text[:200]}')
+            return JsonResponse({
+                'success': False,
+                'error': f'OCR service error. Please try again.'
+            }, status=response.status_code)
+            
+    except requests.Timeout:
+        logger.error(f'OCR request timeout for user {request.user.username}')
+        return JsonResponse({
+            'success': False,
+            'error': 'Request timeout. Please try again.'
+        }, status=504)
+        
+    except requests.RequestException as e:
+        logger.error(f'OCR request error for user {request.user.username}: {str(e)}')
+        return JsonResponse({
+            'success': False,
+            'error': 'Network error. Please check your connection.'
+        }, status=503)
+        
+    except json.JSONDecodeError as e:
+        logger.error(f'Invalid JSON in OCR request from user {request.user.username}: {str(e)}')
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid request format.'
+        }, status=400)
+        
+    except Exception as e:
+        logger.exception(f'Unexpected OCR error for user {request.user.username}: {str(e)}')
+        return JsonResponse({
+            'success': False,
+            'error': 'Internal server error. Please try again.'
+        }, status=500)
