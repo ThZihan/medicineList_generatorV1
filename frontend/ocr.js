@@ -9,6 +9,7 @@ const GEMINI_MODEL_NAME = 'gemini-2.5-flash';
 // 1. Moving API calls to backend (recommended)
 // 2. Using environment variables
 // 3. Using a proxy server
+const GEMINI_API_KEY = 'AIzaSyBIfSBE9WqgAEX3gX4Hp-0_tnKtqFo_R3A'; // Your working key
 
 // Note: Newer models like 2.5 often require the 'v1beta' endpoint
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent`;
