@@ -33,6 +33,9 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv(
 # Google Gemini API key for OCR functionality
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
+# GLM API key for content generation and moderation
+GLM_API_KEY = config('GLM_API_KEY', default='')
+
 
 # Application definition
 
@@ -81,8 +84,28 @@ WSGI_APPLICATION = 'medlist_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# Database Configuration
+# Priority: PostgreSQL (MedVoice) > MySQL (PythonAnywhere) > SQLite (Development)
+
+# Check if PostgreSQL configuration is available (MedVoice integration)
+if config('POSTGRES_DB', default=None) and config('POSTGRES_USER', default=None):
+    # PostgreSQL configuration for MedVoice integration
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('POSTGRES_DB'),
+            'USER': config('POSTGRES_USER'),
+            'PASSWORD': config('POSTGRES_PASSWORD'),
+            'HOST': config('POSTGRES_HOST', default='localhost'),
+            'PORT': config('POSTGRES_PORT', default='5432'),
+            'CONN_MAX_AGE': 600,  # Persistent connections for 10 minutes
+            'OPTIONS': {
+                'connect_timeout': 10,
+            },
+        }
+    }
 # Check if MySQL configuration is available (production - PythonAnywhere free tier)
-if config('DB_NAME', default=None) and config('DB_USER', default=None):
+elif config('DB_NAME', default=None) and config('DB_USER', default=None):
     # MySQL configuration for PythonAnywhere free tier
     DATABASES = {
         'default': {
