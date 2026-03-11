@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Patient, GlobalMedicine, UserMedicine
+from .models import Patient, GlobalMedicine, UserMedicine, UserColorPreferences
 
 
 @admin.register(Patient)
@@ -14,6 +14,15 @@ class GlobalMedicineAdmin(admin.ModelAdmin):
     list_display = ('medicine_name', 'generic_name', 'indication')
     list_filter = ('indication',)
     search_fields = ('medicine_name', 'generic_name', 'indication')
+
+
+@admin.register(UserColorPreferences)
+class UserColorPreferencesAdmin(admin.ModelAdmin):
+    """Admin interface for user color preferences"""
+    list_display = ('user', 'palette_type', 'morning_color', 'noon_color', 'night_color')
+    list_filter = ('palette_type',)
+    search_fields = ('user__username', 'palette_type')
+    ordering = ('-updated_at',)
 
 
 @admin.register(UserMedicine)

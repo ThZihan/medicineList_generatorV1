@@ -1,5 +1,5 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404, reverse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth import authenticate, login, logout as django_logout
@@ -51,7 +51,7 @@ def login_view(request):
                 'name': patient.user.get_full_name() or patient.user.username
             }, status=200)
 
-    return redirect('/index/')
+    return redirect(reverse('medicines:serve_index_page'))
 
 
 @csrf_exempt

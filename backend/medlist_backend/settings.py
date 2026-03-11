@@ -62,7 +62,7 @@ ROOT_URLCONF = 'medlist_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / '../frontend'],
+        'DIRS': [BASE_DIR / '../frontend/templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -144,7 +144,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
-    BASE_DIR / '../frontend',
+    BASE_DIR / '../frontend/static',
 ]
 
 # Default primary key field type

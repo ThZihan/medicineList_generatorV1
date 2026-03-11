@@ -1,19 +1,39 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 
 
-class Patient(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+# Create abstract base class for common fields
+class BaseModel(models.Model):
+    """Abstract base class with common fields and timestamps"""
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        abstract = True
+
+
+class Patient(BaseModel):
+    """Patient profile linked to Django User"""
+    # Use settings.AUTH_USER_MODEL for MedVoice compatibility
+    # This allows MedVoice to use a custom User model without breaking this app
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True)
     age = models.IntegerField()
     email = models.EmailField(blank=True, null=True)
 
     def __str__(self):
         return self.user.username
+    
+    class Meta:
+        db_table = 'patients'
+        verbose_name = "Patient"
+        verbose_name_plural = "Patients"
+        ordering = ['-created_at']
 
 
-class UserColorPreferences(models.Model):
+class UserColorPreferences(BaseModel):
     """Store user-specific color preferences for medicine timing"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    # Use settings.AUTH_USER_MODEL for MedVoice compatibility
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True)
     
     # Palette type: 'default' or 'vibrant'
     palette_type = models.CharField(max_length=20, default='default')
@@ -35,28 +55,36 @@ class UserColorPreferences(models.Model):
     custom_noon_night = models.BooleanField(default=False)
     custom_all_day = models.BooleanField(default=False)
     
-    updated_at = models.DateTimeField(auto_now=True)
-    
     def __str__(self):
         return f"{self.user.username} - {self.palette_type} palette"
     
     class Meta:
+        db_table = 'user_color_preferences'
         verbose_name = "User Color Preferences"
         verbose_name_plural = "User Color Preferences"
+        ordering = ['-updated_at']
 
 
-class GlobalMedicine(models.Model):
-    medicine_name = models.CharField(max_length=255)
+class GlobalMedicine(BaseModel):
+    """Global medicine database for autocomplete"""
+    medicine_name = models.CharField(max_length=255, db_index=True)
     generic_name = models.CharField(max_length=255)
     indication = models.CharField(max_length=255)
 
     def __str__(self):
         return self.medicine_name
+    
+    class Meta:
+        db_table = 'global_medicines'
+        verbose_name = "Global Medicine"
+        verbose_name_plural = "Global Medicines"
+        ordering = ['medicine_name']
 
 
-class UserMedicine(models.Model):
+class UserMedicine(BaseModel):
+    """User's personal medicine list"""
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='medicines')
-    medicine_name = models.CharField(max_length=255)
+    medicine_name = models.CharField(max_length=255, db_index=True)
     generic_name = models.CharField(max_length=255, blank=True, null=True)
     dose = models.CharField(max_length=50, blank=True, null=True)
     instructions = models.TextField(blank=True, null=True)
@@ -67,3 +95,9 @@ class UserMedicine(models.Model):
 
     def __str__(self):
         return self.medicine_name
+    
+    class Meta:
+        db_table = 'user_medicines'
+        verbose_name = "User Medicine"
+        verbose_name_plural = "User Medicines"
+        ordering = ['-created_at']

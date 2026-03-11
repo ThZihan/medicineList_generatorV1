@@ -1,2 +1,0 @@
-# medicineList_generator
-
