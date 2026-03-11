@@ -33,8 +33,17 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv(
 # Google Gemini API key for OCR functionality
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
+# Gemini model for OCR (production stable: gemini-2.0-flash)
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-2.0-flash')
+
 # GLM API key for content generation and moderation
 GLM_API_KEY = config('GLM_API_KEY', default='')
+
+# GLM model for content generation (default: glm-4)
+GLM_MODEL = config('GLM_MODEL', default='glm-4')
+
+# GLM API URL (default: Zhipu AI endpoint)
+GLM_API_URL = config('GLM_API_URL', default='https://open.bigmodel.cn/api/paas/v4/chat/completions')
 
 
 # Application definition

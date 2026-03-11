@@ -34,15 +34,18 @@ class GLMAPIService:
     Handles content generation, moderation, and review structuring operations.
     """
     
-    def __init__(self, api_key=None):
+    def __init__(self, api_key=None, model=None, api_url=None):
         """
         Initialize the GLM API service.
         
         Args:
             api_key: Optional API key. If not provided, will use from settings.
+            model: Optional model name. Defaults to GLM-4.
+            api_url: Optional API URL. If not provided, will use from settings.
         """
         self.api_key = api_key or settings.GLM_API_KEY
-        self.api_url = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+        self.model = model or getattr(settings, 'GLM_MODEL', 'glm-4')
+        self.api_url = api_url or getattr(settings, 'GLM_API_URL', 'https://open.bigmodel.cn/api/paas/v4/chat/completions')
         self.timeout = 30  # 30 second timeout
         
     def _validate_request(self, content: str) -> tuple[bool, Optional[str]]:
@@ -66,13 +69,13 @@ class GLMAPIService:
         
         return True, None
     
-    def _construct_prompt(self, prompt_type: str, content: str, **kwargs) -> str:
+    def _construct_prompt(self, prompt_type: str, content: Any, **kwargs) -> str:
         """
         Construct the appropriate prompt based on the operation type.
         
         Args:
             prompt_type: Type of prompt ('review_generation', 'moderation', 'structuring')
-            content: The content to process
+            content: The content to process (str or List[Dict] depending on prompt_type)
             **kwargs: Additional parameters specific to prompt type
             
         Returns:
@@ -93,13 +96,14 @@ class GLMAPIService:
         
         Args:
             answers: List of Q&A answers
-            **kwargs: Additional parameters (patient_name, doctor_name, etc.)
+            **kwargs: Additional parameters (patient_name, doctor_name, review_type, etc.)
             
         Returns:
             str: The review generation prompt
         """
         patient_name = kwargs.get('patient_name', 'Patient')
         doctor_name = kwargs.get('doctor_name', 'Doctor')
+        review_type = kwargs.get('review_type', 'clinical')  # 'clinical' or 'medvoice'
         
         # Format answers for the prompt
         answers_text = '\n'.join([
@@ -107,13 +111,75 @@ class GLMAPIService:
             for ans in answers
         ])
         
-        prompt = f"""You are a medical documentation specialist. Generate a comprehensive medical review based on the following Q&A session.
+        if review_type == 'medvoice':
+            # MedVoice-specific prompt for patient experience reviews
+            prompt = f"""You are a medical review specialist for MedVoice. Generate a comprehensive patient experience review based on the following Q&A session.
 
 Patient Name: {patient_name}
 Doctor Name: {doctor_name}
 
-Q&A Session:
+<user_qa_session>
 {answers_text}
+</user_qa_session>
+
+Generate a structured patient experience review in JSON format with the following structure:
+{{
+  "review": {{
+    "patient_name": "string",
+    "doctor_name": "string",
+    "facility_name": "string",
+    "review_date": "YYYY-MM-DD",
+    "overall_rating": number (1-5),
+    "wait_time": {{
+      "rating": number (1-5),
+      "comment": "string"
+    }},
+    "doctor_behavior": {{
+      "rating": number (1-5),
+      "comment": "string"
+    }},
+    "facility_quality": {{
+      "rating": number (1-5),
+      "comment": "string"
+    }},
+    "cost_transparency": {{
+      "rating": number (1-5),
+      "comment": "string"
+    }},
+    "treatment_effectiveness": {{
+      "rating": number (1-5),
+      "comment": "string"
+    }},
+    "staff_behavior": {{
+      "rating": number (1-5),
+      "comment": "string"
+    }},
+    "pros": ["string", "string"],
+    "cons": ["string", "string"],
+    "recommendation": "Would Recommend" | "Would Not Recommend" | "Neutral",
+    "summary": "string (brief 2-3 sentence summary)",
+    "detailed_feedback": "string"
+  }}
+}}
+
+IMPORTANT:
+- Extract all rating information accurately from the Q&A
+- Use professional but accessible language
+- Keep the review honest and balanced
+- Return ONLY valid JSON, no additional text
+- If information is not available, use null or "Not specified"
+- Ratings should be integers from 1 to 5
+"""
+        else:
+            # Clinical medical review prompt (original)
+            prompt = f"""You are a medical documentation specialist. Generate a comprehensive medical review based on the following Q&A session.
+
+Patient Name: {patient_name}
+Doctor Name: {doctor_name}
+
+<user_qa_session>
+{answers_text}
+</user_qa_session>
 
 Generate a structured medical review in JSON format with the following structure:
 {{
@@ -166,18 +232,21 @@ IMPORTANT:
 3. No harmful or dangerous advice
 4. Professional tone and language
 5. Compliance with medical standards
+6. No hate speech, harassment, or inappropriate content
+7. No personal information or PII disclosure
 
-Content to moderate:
+<user_content>
 {content}
+</user_content>
 
 Return your analysis in JSON format:
 {{
-  "is_safe": boolean,
+  "decision": "APPROVE" | "FLAG" | "REJECT",
   "safety_score": number (0-100),
   "issues": [
     {{
       "severity": "high" | "medium" | "low",
-      "category": "medical_accuracy" | "safety" | "terminology" | "tone" | "compliance",
+      "category": "medical_accuracy" | "safety" | "terminology" | "tone" | "compliance" | "inappropriate_content" | "pii",
       "description": "string",
       "suggestion": "string"
     }}
@@ -185,10 +254,16 @@ Return your analysis in JSON format:
   "summary": "string"
 }}
 
+Decision Guidelines:
+- APPROVE: Content is safe, accurate, and appropriate for publication
+- FLAG: Content has minor issues that need review before publication (e.g., minor inaccuracies, tone issues)
+- REJECT: Content has serious issues (e.g., dangerous advice, hate speech, PII disclosure)
+
 IMPORTANT:
 - Return ONLY valid JSON, no additional text
 - Be thorough in your analysis
 - Provide actionable suggestions for improvement
+- Always include a clear decision in the "decision" field
 """
         return prompt
     
@@ -204,8 +279,9 @@ IMPORTANT:
         """
         prompt = f"""You are a medical documentation specialist. Structure and format the following medical review content into a standardized format.
 
-Content to structure:
+<user_content>
 {content}
+</user_content>
 
 Return the structured content in JSON format:
 {{
@@ -268,7 +344,7 @@ IMPORTANT:
         payload = {
             'model': model,
             'messages': messages,
-            'temperature': 0.7,
+            'temperature': 0.1,  # Lower temperature for more deterministic JSON output
             'max_tokens': 4000
         }
         
@@ -329,7 +405,8 @@ IMPORTANT:
         answers: List[Dict],
         patient_name: str = None,
         doctor_name: str = None,
-        model: str = 'glm-4'
+        review_type: str = 'clinical',
+        model: str = None
     ) -> Dict:
         """
         Generate a medical review from Q&A answers.
@@ -338,7 +415,8 @@ IMPORTANT:
             answers: List of Q&A answer dictionaries
             patient_name: Optional patient name
             doctor_name: Optional doctor name
-            model: GLM model to use
+            review_type: Type of review ('clinical' or 'medvoice')
+            model: GLM model to use (defaults to instance model)
             
         Returns:
             dict: Generated review with success status
@@ -348,7 +426,7 @@ IMPORTANT:
             ...     {'question': 'What brings you here today?', 'answer': 'I have a headache'}
             ... ]
             >>> service = GLMAPIService()
-            >>> result = service.generate_review_from_qa(answers)
+            >>> result = service.generate_review_from_qa(answers, review_type='clinical')
             >>> print(result['review'])
         """
         try:
@@ -359,12 +437,16 @@ IMPORTANT:
                     'error': 'Invalid answers: must be a non-empty list'
                 }
             
+            # Use instance model if not specified
+            model = model or self.model
+            
             # Construct prompt
             prompt = self._construct_prompt(
                 'review_generation',
                 answers,
                 patient_name=patient_name,
-                doctor_name=doctor_name
+                doctor_name=doctor_name,
+                review_type=review_type
             )
             
             # Call API
@@ -373,7 +455,7 @@ IMPORTANT:
                 {'role': 'user', 'content': prompt}
             ]
             
-            response = self._call_api(messages, model)
+            response = self._call_api(messages, model or self.model)
             result = self._parse_response(response)
             
             logger.info(f'Successfully generated review from {len(answers)} Q&A answers')
@@ -396,13 +478,13 @@ IMPORTANT:
                 'error': f'Unexpected error: {str(e)}'
             }
     
-    def moderate_content(self, content: str, model: str = 'glm-4') -> Dict:
+    def moderate_content(self, content: str, model: str = None) -> Dict:
         """
         Moderate medical content for safety and accuracy.
         
         Args:
             content: The content to moderate
-            model: GLM model to use
+            model: GLM model to use (defaults to instance model)
             
         Returns:
             dict: Moderation results with safety assessment
@@ -430,7 +512,7 @@ IMPORTANT:
                 {'role': 'user', 'content': prompt}
             ]
             
-            response = self._call_api(messages, model)
+            response = self._call_api(messages, model or self.model)
             result = self._parse_response(response)
             
             logger.info(f'Successfully moderated content (length: {len(content)})')
@@ -453,13 +535,13 @@ IMPORTANT:
                 'error': f'Unexpected error: {str(e)}'
             }
     
-    def structure_review(self, content: str, model: str = 'glm-4') -> Dict:
+    def structure_review(self, content: str, model: str = None) -> Dict:
         """
         Structure and format medical review content.
         
         Args:
             content: The content to structure
-            model: GLM model to use
+            model: GLM model to use (defaults to instance model)
             
         Returns:
             dict: Structured review
@@ -487,7 +569,7 @@ IMPORTANT:
                 {'role': 'user', 'content': prompt}
             ]
             
-            response = self._call_api(messages, model)
+            response = self._call_api(messages, model or self.model)
             result = self._parse_response(response)
             
             logger.info(f'Successfully structured review content (length: {len(content)})')
@@ -511,71 +593,5 @@ IMPORTANT:
             }
 
 
-class GLMAPIClient:
-    """
-    High-level client for GLM API operations.
-    
-    Provides simplified methods for common GLM API tasks.
-    """
-    
-    def __init__(self, api_key=None):
-        """
-        Initialize the GLM API client.
-        
-        Args:
-            api_key: Optional API key. If not provided, will use from settings.
-        """
-        self.service = GLMAPIService(api_key)
-    
-    def generate_medical_review(
-        self,
-        answers: List[Dict],
-        patient_name: str = None,
-        doctor_name: str = None
-    ) -> Dict:
-        """
-        Generate a medical review from Q&A answers.
-        
-        This is a convenience method that wraps generate_review_from_qa.
-        
-        Args:
-            answers: List of Q&A answer dictionaries
-            patient_name: Optional patient name
-            doctor_name: Optional doctor name
-            
-        Returns:
-            dict: Generated review or error
-        """
-        return self.service.generate_review_from_qa(
-            answers,
-            patient_name=patient_name,
-            doctor_name=doctor_name
-        )
-    
-    def check_content_safety(self, content: str) -> Dict:
-        """
-        Check if medical content is safe and appropriate.
-        
-        This is a convenience method that wraps moderate_content.
-        
-        Args:
-            content: The content to check
-            
-        Returns:
-            dict: Safety assessment or error
-        """
-        return self.service.moderate_content(content)
-    
-    def format_medical_review(self, content: str) -> Dict:
-        """
-        Format and structure medical review content.
-        
-        This is a convenience method that wraps structure_review.
-        
-        Args:
-            content: The content to format
-            
-        Returns:
-            dict: Structured review or error
-        """
-        return self.service.structure_review(content)
+# Convenience alias for backward compatibility
+GLMAPIClient = GLMAPIService

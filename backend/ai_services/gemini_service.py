@@ -16,6 +16,7 @@ Key Features:
 import requests
 import logging
 import base64
+import json
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -33,15 +34,17 @@ class GeminiAPIService:
     Handles OCR operations for medicine prescription scanning.
     """
     
-    def __init__(self, api_key=None):
+    def __init__(self, api_key=None, model=None):
         """
         Initialize the Gemini API service.
         
         Args:
             api_key: Optional API key. If not provided, will use from settings.
+            model: Optional model name. Defaults to gemini-2.0-flash for production stability.
         """
         self.api_key = api_key or settings.GEMINI_API_KEY
-        self.api_url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent'
+        self.model = model or getattr(settings, 'GEMINI_MODEL', 'gemini-2.0-flash')
+        self.api_url = f'https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}'
         
     def _validate_request(self, image_data, mime_type):
         """
@@ -74,13 +77,10 @@ class GeminiAPIService:
         
         return True, None
     
-    def _construct_ocr_prompt(self, model='gemini-2.5-flash-latest'):
+    def _construct_ocr_prompt(self):
         """
         Construct the OCR prompt for medical prescription extraction.
         
-        Args:
-            model: Gemini model to use
-            
         Returns:
             str: The OCR prompt
         """
@@ -208,12 +208,12 @@ Important rules:
         text_lower = text.lower()
         
         # Check for before food keywords
-        before_keywords = ['before food', 'take before food', 'with food', 'take with food', 'before meals', 'with meals']
+        before_keywords = ['before food', 'take before food', 'before meals']
         if any(keyword in text_lower for keyword in before_keywords):
             return 'BEFORE FOOD'
         
         # Check for after food keywords
-        after_keywords = ['after food', 'take after food', 'with food', 'after meals', 'with meals']
+        after_keywords = ['after food', 'take after food', 'after meals', 'with food', 'take with food', 'with meals']
         if any(keyword in text_lower for keyword in after_keywords):
             return 'AFTER FOOD'
         
@@ -256,13 +256,17 @@ Important rules:
             payload = {
                 'contents': [
                     {
-                        'inline_data': {
-                            'mime_type': mime_type,
-                            'data': image_data
-                        }
-                    },
-                    {
-                        'text': prompt
+                        'parts': [
+                            {
+                                'inline_data': {
+                                    'mime_type': mime_type,
+                                    'data': image_data
+                                }
+                            },
+                            {
+                                'text': prompt
+                            }
+                        ]
                     }
                 ],
                 'generationConfig': {
